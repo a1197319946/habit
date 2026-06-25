@@ -144,7 +144,8 @@ const currentWeekDays = ref([]);
 const futureWeekDays = ref([]);
 
 const habits = computed(() => habitStore.getHabits);
-const todayStr = new Date().toISOString().split('T')[0];
+const _today = new Date();
+const todayStr = [_today.getFullYear(), String(_today.getMonth() + 1).padStart(2, '0'), String(_today.getDate()).padStart(2, '0')].join('-');
 const selectedDate = ref(todayStr);
 const currentWeekOffset = ref(0);
 const currentDisplayMonth = ref(new Date().getMonth() + 1);
@@ -397,7 +398,7 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .header-section {
-  padding: 4px 16px 20px;
+  padding: 4px 0 20px;
 }
 
 .header-text {
