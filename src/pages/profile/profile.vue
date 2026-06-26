@@ -79,7 +79,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
+import { onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { useUserStore } from '@/store/user';
 import { cloud } from '@/utils/cloud';
 
@@ -160,6 +160,22 @@ const showAbout = () => {
     confirmColor: '#4F46E5'
   });
 };
+
+// 开启微信分享给朋友
+onShareAppMessage(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变',
+    path: '/pages/index/index'
+  };
+});
+
+// 开启分享到朋友圈
+onShareTimeline(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变'
+  };
+});
+
 </script>
 
 <style lang="scss" scoped>

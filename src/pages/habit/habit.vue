@@ -56,6 +56,7 @@
 </template>
 
 <script setup>
+import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { ref, computed, watch } from 'vue';
 import { useHabitStore } from '@/store/habit';
 
@@ -154,6 +155,22 @@ const goToDetail = (id) => {
     url: `/pages/habit-detail/habit-detail?id=${id}`
   });
 };
+
+// 开启微信分享给朋友
+onShareAppMessage(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变',
+    path: '/pages/index/index'
+  };
+});
+
+// 开启分享到朋友圈
+onShareTimeline(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变'
+  };
+});
+
 </script>
 
 <style lang="scss" scoped>

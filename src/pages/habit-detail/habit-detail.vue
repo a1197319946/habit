@@ -119,7 +119,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useHabitStore } from '../../store/habit';
-import { onLoad } from '@dcloudio/uni-app';
+import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { localIcons } from '../../utils/icons';
 
 const habitStore = useHabitStore();
@@ -225,6 +225,22 @@ const confirmDelete = () => {
     }
   });
 };
+
+// 开启微信分享给朋友
+onShareAppMessage(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变',
+    path: '/pages/index/index'
+  };
+});
+
+// 开启分享到朋友圈
+onShareTimeline(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变'
+  };
+});
+
 </script>
 
 <style lang="scss" scoped>

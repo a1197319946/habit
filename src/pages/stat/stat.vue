@@ -199,6 +199,7 @@
 </template>
 
 <script setup>
+import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { ref, computed } from 'vue';
 import { useHabitStore } from '@/store/habit';
 
@@ -454,6 +455,22 @@ const jumpToYear = (y) => {
   currentYear.value = y;
   filterMode.value = 'year';
 };
+
+
+// 开启微信分享给朋友
+onShareAppMessage(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变',
+    path: '/pages/index/index'
+  };
+});
+
+// 开启分享到朋友圈
+onShareTimeline(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变'
+  };
+});
 
 </script>
 
