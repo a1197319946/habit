@@ -37,10 +37,10 @@
               <text class="day-number" :class="{'is-selected-text': day.isSelected && !day.isChecked, 'is-future-text': day.isFuture && !day.isToday}">{{ day.dateText }}</text>
               
               <view class="day-status-icon">
-                <view v-if="day.isChecked" class="status-icon checked-circle" :class="{'selected-bg': day.isSelected}">
+                <view v-if="day.isChecked" class="status-icon checked-circle" :class="{'today-bg': day.isToday}">
                   <uni-icons type="checkmarkempty" size="12" color="#fff"></uni-icons>
                 </view>
-                <view v-else class="status-icon unchecked-circle" :class="{'selected-border': day.isSelected, 'future-border': day.isFuture}"></view>
+                <view v-else class="status-icon unchecked-circle"></view>
               </view>
               
               <view v-if="day.isToday && !day.isSelected" class="active-indicator"></view>
@@ -583,22 +583,14 @@ const handleMoodSubmit = (moodData) => {
   background-color: #10B981;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
   
-  &.selected-bg {
+  &.today-bg {
     background-color: #8B5CF6;
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
   }
 }
 
 .unchecked-circle {
-  border: 2px solid transparent;
-  
-  &.selected-border {
-    border-color: #F59E0B;
-  }
-  
-  &.future-border {
-    border-color: #E5E7EB;
-  }
+  border: 2px solid #E5E7EB;
 }
 
 .active-indicator {
@@ -643,17 +635,18 @@ const handleMoodSubmit = (moodData) => {
   border-radius: var(--radius-lg, 16px);
   padding: 16px 8px;
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.05));
-  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-style: preserve-3d;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  border: 1px solid transparent;
   
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
   }
   
   &.is-checked {
     background: #ECFDF5;
-    border: none;
-    transform: rotateY(360deg);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12), 0 3px 6px rgba(16, 185, 129, 0.08);
   }
 
   .habit-icon {
@@ -668,11 +661,13 @@ const handleMoodSubmit = (moodData) => {
     font-size: 20px;
     font-weight: bold;
     box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
+    transition: all 0.4s ease;
   }
   
   .checked-circle {
     background-color: #10B981 !important;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    animation: premium-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
   
   .custom-icon {
@@ -797,6 +792,12 @@ const handleMoodSubmit = (moodData) => {
   position: absolute;
   opacity: 0;
   animation: confetti-pop 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes premium-pop {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes confetti-pop {

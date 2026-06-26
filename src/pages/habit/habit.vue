@@ -22,13 +22,16 @@
           boxShadow: draggingIndex === index ? '0 15px 30px rgba(0,0,0,0.15)' : ''
         }"
         @click="goToDetail(habit.id)"
-        @longpress="onDragStart(index, $event)"
-        @touchmove.stop.prevent="onDragMove($event)"
-        @touchend="onDragEnd"
-        @touchcancel="onDragEnd"
       >
         <view class="habit-info flex-row items-center">
-          <view class="drag-handle"><uni-icons type="list" size="20" color="#D1D5DB"></uni-icons></view>
+          <view class="drag-handle"
+            @touchstart.stop="onDragStart(index, $event)"
+            @touchmove.stop.prevent="onDragMove($event)"
+            @touchend="onDragEnd"
+            @touchcancel="onDragEnd"
+          >
+            <uni-icons type="list" size="20" color="#D1D5DB"></uni-icons>
+          </view>
           <view class="habit-icon" :style="{ backgroundColor: habit.color || 'var(--primary)' }">
             <image v-if="habit.icon" :src="'/static/icons/habbit/' + habit.icon + '.png'" class="custom-icon" />
             <text v-else class="icon-text">{{ habit.name.charAt(0) }}</text>

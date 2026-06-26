@@ -14,10 +14,10 @@ exports.main = async (event, context) => {
   
   switch (action) {
     case 'init': {
-      // 获取用户所有的习惯、打卡、心情
-      const habits = await habitsCol.where({ openid }).get();
-      const checkins = await checkinsCol.where({ openid }).get();
-      const moods = await moodsCol.where({ openid }).get();
+      // 获取用户所有的习惯、打卡、心情 (加上 catch 防止集合不存在时报错)
+      const habits = await habitsCol.where({ openid }).get().catch(() => ({ data: [] }));
+      const checkins = await checkinsCol.where({ openid }).get().catch(() => ({ data: [] }));
+      const moods = await moodsCol.where({ openid }).get().catch(() => ({ data: [] }));
       
       return {
         code: 0,

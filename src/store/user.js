@@ -33,37 +33,48 @@ export const useUserStore = defineStore('user', {
     },
     async silentLogin() {
       if (this.openid) return this.openid; // already logged in
-
-      try {
-        const loginRes = await new Promise((resolve, reject) => {
-          uni.login({
-            provider: 'weixin',
-            success: resolve,
-            fail: reject
-          });
-        });
-
-        const { result } = await cloud.callFunction({ 
-          name: 'user-center',
-          data: { action: 'login', code: loginRes.code }
-        });
-        
-        if (result.code === 0) {
-          this.setOpenid(result.openid);
-          this.saveToStorage();
-          return result.openid;
-        } else {
-          console.error('Silent login failed:', result);
-          const errMsg = `AppSecret可能错误(errcode: ${result.data?.errcode || '未知'})，完整信息: ${JSON.stringify(result)}`;
-          uni.showModal({ title: '静默登录失败', content: errMsg, showCancel: false });
-          throw new Error('静默登录失败: ' + errMsg);
-        }
-      } catch (err) {
-        console.error('Silent login error:', err);
-        const errMsg = '调用user-center云函数失败: ' + (err.message || String(err));
-        uni.showModal({ title: '网络或环境异常', content: errMsg, showCancel: false });
-        throw new Error(errMsg);
+      
+      // 防止并发调用
+      if (this._loginPromise) {
+        return this._loginPromise;
       }
+
+      this._loginPromise = (async () => {
+        try {
+          const loginRes = await new Promise((resolve, reject) => {
+            uni.login({
+              provider: 'weixin',
+              success: resolve,
+              fail: reject
+            });
+          });
+
+          const { result } = await cloud.callFunction({ 
+            name: 'user-center',
+            data: { action: 'login', code: loginRes.code }
+          });
+          
+          if (result.code === 0) {
+            this.setOpenid(result.openid);
+            this.saveToStorage();
+            return result.openid;
+          } else {
+            console.error('Silent login failed:', result);
+            const errMsg = `AppSecret可能错误(errcode: ${result.data?.errcode || '未知'})，完整信息: ${JSON.stringify(result)}`;
+            uni.showModal({ title: '静默登录失败', content: errMsg, showCancel: false });
+            throw new Error('静默登录失败: ' + errMsg);
+          }
+        } catch (err) {
+          console.error('Silent login error:', err);
+          const errMsg = '调用user-center云函数失败: ' + (err.message || String(err));
+          uni.showModal({ title: '网络或环境异常', content: errMsg, showCancel: false });
+          throw new Error(errMsg);
+        } finally {
+          this._loginPromise = null;
+        }
+      })();
+      
+      return this._loginPromise;
     },
     saveToStorage() {
       uni.setStorageSync('userInfo', JSON.stringify({

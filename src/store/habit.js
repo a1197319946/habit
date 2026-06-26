@@ -51,13 +51,17 @@ export const useHabitStore = defineStore('habit', {
           data: { action: 'init', openid }
         });
         if (result.code === 0) {
-          this.habits = [...(result.data.habits || [])];
-          this.checkins = [...(result.data.checkins || [])];
+          const fetchedHabits = result.data.habits || [];
+          const fetchedCheckins = result.data.checkins || [];
+          
+          this.habits = [...fetchedHabits];
+          this.checkins = [...fetchedCheckins];
           this.moods = [...(result.data.moods || [])];
           this.saveToStorage();
         }
       } catch (e) {
         console.error('initFromCloud error', e);
+        uni.showModal({ title: '拉取失败', content: String(e.message || e), showCancel: false });
       }
     },
     

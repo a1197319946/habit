@@ -1,4 +1,7 @@
 <script>
+import { useUserStore } from '@/store/user';
+import { useHabitStore } from '@/store/habit';
+
 export default {
   onLaunch: async function () {
     console.log('App Launch');
@@ -12,8 +15,6 @@ export default {
     }
 
     // 初始化数据
-    const { useUserStore } = await import('@/store/user');
-    const { useHabitStore } = await import('@/store/habit');
     const userStore = useUserStore();
     const habitStore = useHabitStore();
     
