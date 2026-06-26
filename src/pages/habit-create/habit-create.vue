@@ -106,15 +106,20 @@
         </view>
       </view>
     <view class="fixed-bottom">
-      <view class="submit-btn primary-btn flex-row items-center justify-center" @click="submit">
-        <text>完成创建</text>
+      <view 
+        class="submit-btn primary-btn flex-row items-center justify-center" 
+        :class="{ 'is-loading': isSubmitting }"
+        @click="submit"
+      >
+        <view v-if="isSubmitting" class="loading-spinner"></view>
+        <text>{{ isSubmitting ? '创建中...' : '完成创建' }}</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue';
+import { reactive, computed, ref } from 'vue';
 import { useHabitStore } from '@/store/habit';
 import { localIcons } from '@/utils/icons';
 
@@ -170,6 +175,8 @@ const formData = reactive({
   monthlyTarget: 10
 });
 
+const isSubmitting = ref(false);
+
 const toggleFixedDay = (day) => {
   const idx = formData.fixedDays.indexOf(day);
   if (idx > -1) {
@@ -183,19 +190,42 @@ const toggleFixedDay = (day) => {
   }
 };
 
-const submit = () => {
-  if (!formData.name.trim()) {
+const submit = async () => {
+  if (isSubmitting.value) return;
+
+  const trimmedName = formData.name.trim();
+  if (!trimmedName) {
     uni.showToast({ title: '请输入习惯名称', icon: 'none' });
     return;
   }
+  
+  // 校验重复名称
+  const isDuplicate = habitStore.habits.some(h => h.name === trimmedName);
+  if (isDuplicate) {
+    uni.showToast({ title: '习惯已经存在了鸭 🦆', icon: 'none', duration: 2000 });
+    return;
+  }
+
   const specialChars = /[`~!@#$%^&*()_\-+=<>?:"{}|,.\/;'\\[\]·~！@#￥%……&*（）——\-+={}|《》？：“”【】、；‘’，。、]/im;
-  if (specialChars.test(formData.name)) {
+  if (specialChars.test(trimmedName)) {
     uni.showToast({ title: '习惯名称不能包含特殊字符', icon: 'none' });
     return;
   }
-  habitStore.addHabit({ ...formData });
-  uni.showToast({ title: '创建成功', icon: 'success' });
-  setTimeout(() => uni.navigateBack(), 1000);
+  
+  isSubmitting.value = true;
+  try {
+    await habitStore.addHabit({ ...formData, name: trimmedName });
+    uni.showToast({ title: '创建成功', icon: 'success' });
+    setTimeout(() => uni.navigateBack(), 1000);
+  } catch (error) {
+    uni.showModal({
+      title: '错误详情 (请截图)',
+      content: typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error),
+      showCancel: false
+    });
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 
@@ -397,6 +427,27 @@ const submit = () => {
     border-radius: var(--radius-xl);
     font-size: 16px;
     font-weight: 600;
+    transition: all 0.3s ease;
+    
+    &.is-loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
   }
+}
+
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>

@@ -9,7 +9,7 @@
         </view>
       </view>
       <view class="user-meta flex-col">
-        <text class="nickname">{{ userStore.userInfo.nickName || '未授权用户' }}</text>
+        <text class="nickname">{{ userStore.userInfo.nickName || '神秘打卡人' }}</text>
         <text class="sub-text">坚持打卡，遇见更好的自己</text>
       </view>
       <view class="edit-icon">›</view>
@@ -43,14 +43,50 @@
         <view class="item-arrow">›</view>
       </button>
     </view>
+
+    <!-- Profile Edit Popup -->
+    <view v-if="showProfilePopup" class="popup-mask flex-col justify-end" @click="closeProfilePopup">
+      <view class="popup-content flex-col" @click.stop>
+        <view class="header flex-row items-center justify-between">
+          <view class="date-info flex-col">
+            <text class="title">完善个人资料</text>
+            <text class="subtitle">让大家认识你</text>
+          </view>
+          <view class="close-icon" @click="closeProfilePopup">✕</view>
+        </view>
+        
+        <view class="form-body flex-col items-center w-full" style="padding-top: 16px;">
+          <button class="avatar-wrapper" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+            <image class="avatar-img" :src="tempAvatarUrl || '/static/tabbar/profile.png'" mode="aspectFill"></image>
+            <view class="avatar-edit-badge"><uni-icons type="camera-filled" size="12" color="#fff"></uni-icons></view>
+          </button>
+          <text class="form-hint">点击更换头像 (可选微信头像)</text>
+          
+          <view class="nickname-wrapper flex-row items-center">
+            <input type="nickname" class="nickname-input" placeholder="请输入或获取微信昵称" :value="tempNickName" @blur="onNicknameInput" @change="onNicknameInput"/>
+          </view>
+        </view>
+        
+        <view class="footer w-full">
+          <view class="submit-btn primary-btn flex-row items-center justify-center" @click="saveProfile">
+            <text>保 存</text>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import { useUserStore } from '@/store/user';
+import { cloud } from '@/utils/cloud';
 
 const userStore = useUserStore();
+const showProfilePopup = ref(false);
+const tempAvatarUrl = ref('');
+const tempNickName = ref('');
 
 onShow(() => {
   // 确保数据是最新的
@@ -59,13 +95,59 @@ onShow(() => {
   }
 });
 
+const closeProfilePopup = () => {
+  showProfilePopup.value = false;
+};
+
 const goTo = (url) => {
   uni.navigateTo({ url });
 };
 
 const handleProfileClick = () => {
-  if (!userStore.userInfo.avatarUrl || !userStore.userInfo.nickName) {
-    uni.navigateTo({ url: '/pages/login/login' });
+  tempAvatarUrl.value = userStore.userInfo.avatarUrl || '';
+  tempNickName.value = userStore.userInfo.nickName || '';
+  showProfilePopup.value = true;
+};
+
+const onChooseAvatar = (e) => {
+  tempAvatarUrl.value = e.detail.avatarUrl;
+};
+
+const onNicknameInput = (e) => {
+  tempNickName.value = e.detail.value;
+};
+
+const saveProfile = async () => {
+  if (!tempAvatarUrl.value || !tempNickName.value) {
+    uni.showToast({ title: '请完善头像和昵称', icon: 'none' });
+    return;
+  }
+  uni.showLoading({ title: '保存中...' });
+  try {
+    let fileID = tempAvatarUrl.value;
+    const openid = userStore.openid;
+    if (openid && tempAvatarUrl.value && !tempAvatarUrl.value.startsWith('http') && !tempAvatarUrl.value.startsWith('cloud://')) {
+      const cloudPath = `avatars/${openid}-${Date.now()}.jpg`;
+      const uploadRes = await cloud.uploadFile({
+        cloudPath: cloudPath,
+        filePath: tempAvatarUrl.value,
+      });
+      fileID = uploadRes.fileID;
+    }
+    
+    userStore.setUserInfo({
+      avatarUrl: fileID,
+      nickName: tempNickName.value
+    });
+    userStore.saveToStorage();
+    
+    uni.hideLoading();
+    uni.showToast({ title: '保存成功', icon: 'success' });
+    showProfilePopup.value = false;
+  } catch (err) {
+    console.error('Save profile error', err);
+    uni.hideLoading();
+    uni.showToast({ title: '保存失败: ' + (err.message || '未知错误'), icon: 'none' });
   }
 };
 
@@ -186,5 +268,127 @@ const showAbout = () => {
       display: none;
     }
   }
+}
+
+.popup-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--window-bottom, 0);
+  background: var(--uni-bg-color-mask, rgba(0, 0, 0, 0.4));
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.popup-content {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: 16px 20px 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.header {
+  margin-bottom: 16px;
+  .title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .close-icon {
+    font-size: 20px;
+    color: var(--text-light);
+    padding: 4px;
+  }
+}
+
+.form-body {
+  margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+  width: 80px;
+  height: 80px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: #f3f4f6;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 2px solid white;
+  
+  &::after { display: none; }
+  
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+  }
+  
+  .avatar-edit-badge {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    background: var(--primary);
+    border-radius: 50%;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.nickname-wrapper {
+  width: 80%;
+  background: var(--background);
+  border-radius: 100px;
+  padding: 12px 20px;
+  
+  .nickname-input {
+    width: 100%;
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-main);
+  }
+}
+
+.footer {
+  .primary-btn {
+    height: 48px;
+    background: var(--primary);
+    color: white;
+    border-radius: var(--radius-xl);
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 </style>

@@ -1,14 +1,33 @@
 <script>
 export default {
-  onLaunch: function () {
+  onLaunch: async function () {
     console.log('App Launch');
-    if (!wx.cloud) {
-      console.error('请使用 2.2.3 或以上的基础库以使用云能力');
-    } else {
+    
+    // 保留 wx.cloud.init 以支持解析以前存下来的 cloud:// 格式的头像图片
+    if (typeof wx !== 'undefined' && wx.cloud) {
       wx.cloud.init({
         env: 'cloud1-d7g8ng9cb71699831',
         traceUser: true,
       });
+    }
+
+    // 初始化数据
+    const { useUserStore } = await import('@/store/user');
+    const { useHabitStore } = await import('@/store/habit');
+    const userStore = useUserStore();
+    const habitStore = useHabitStore();
+    
+    // 初始化本地的 userInfo
+    await userStore.initFromStorage();
+    
+    // 静默登录获取 openid（如果已有，内部会直接返回）
+    const openid = await userStore.silentLogin();
+    
+    // 使用 openid 初始化云端数据
+    if (openid) {
+      await habitStore.initFromCloud(openid);
+    } else {
+      console.error('App Launch: 获取 openid 失败，云端同步可能无法正常工作');
     }
   },
   onShow: function () {

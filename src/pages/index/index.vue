@@ -128,11 +128,14 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
+import { onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
+import { storeToRefs } from 'pinia';
 import { useHabitStore } from '@/store/habit';
+import { useUserStore } from '@/store/user';
 import MoodRecorder from '@/components/mood-recorder/mood-recorder.vue';
 
 const habitStore = useHabitStore();
+const userStore = useUserStore();
 
 const showSuccess = ref(false);
 const showMoodRecorder = ref(false);
@@ -141,9 +144,25 @@ const confettiParticles = ref([]);
 const currentHabit = ref(null);
 const pastWeekDays = ref([]);
 const currentWeekDays = ref([]);
+
+// 开启微信分享给朋友
+onShareAppMessage(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变',
+    path: '/pages/index/index',
+    // imageUrl: '/static/share-bg.jpg' // 可选：配置自定义分享卡片图片
+  };
+});
+
+// 开启分享到朋友圈
+onShareTimeline(() => {
+  return {
+    title: '小习惯 - 坚持每天微小的改变'
+  };
+});
 const futureWeekDays = ref([]);
 
-const habits = computed(() => habitStore.getHabits);
+const { getHabits: habits } = storeToRefs(habitStore);
 const _today = new Date();
 const todayStr = [_today.getFullYear(), String(_today.getMonth() + 1).padStart(2, '0'), String(_today.getDate()).padStart(2, '0')].join('-');
 const selectedDate = ref(todayStr);
@@ -359,10 +378,6 @@ const handleCheckin = (habitId) => {
 };
 
 const goToAddHabit = () => {
-  if (!userStore.userInfo.avatarUrl || !userStore.userInfo.nickName) {
-    uni.navigateTo({ url: '/pages/login/login' });
-    return;
-  }
   uni.navigateTo({
     url: '/pages/habit-create/habit-create'
   });

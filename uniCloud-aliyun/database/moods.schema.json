@@ -1,0 +1,39 @@
+{
+  "bsonType": "object",
+  "required": ["habitId", "openid"],
+  "permission": {
+    "read": "doc.openid == auth.uid",
+    "create": "true",
+    "update": "doc.openid == auth.uid",
+    "delete": "doc.openid == auth.uid"
+  },
+  "properties": {
+    "_id": {
+      "description": "系统自动生成"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "用户唯一标识"
+    },
+    "habitId": {
+      "bsonType": "string",
+      "description": "关联的习惯ID"
+    },
+    "moodValue": {
+      "bsonType": "number",
+      "description": "心情值"
+    },
+    "moodIcon": {
+      "bsonType": "string",
+      "description": "心情图标"
+    },
+    "note": {
+      "bsonType": "string",
+      "description": "备注"
+    },
+    "timestamp": {
+      "bsonType": "number",
+      "description": "时间戳"
+    }
+  }
+}

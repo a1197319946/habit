@@ -1,0 +1,39 @@
+{
+  "bsonType": "object",
+  "required": ["name", "openid"],
+  "permission": {
+    "read": "doc.openid == auth.uid",
+    "create": "true",
+    "update": "doc.openid == auth.uid",
+    "delete": "doc.openid == auth.uid"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（用户 ID），系统自动生成"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "用户唯一标识"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "习惯名称"
+    },
+    "icon": {
+      "bsonType": "string",
+      "description": "图标"
+    },
+    "color": {
+      "bsonType": "string",
+      "description": "颜色"
+    },
+    "frequency": {
+      "bsonType": "array",
+      "description": "打卡频率"
+    },
+    "createdAt": {
+      "bsonType": "string",
+      "description": "创建时间"
+    }
+  }
+}

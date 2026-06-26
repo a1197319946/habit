@@ -1,0 +1,31 @@
+{
+  "bsonType": "object",
+  "required": ["habitId", "date", "openid"],
+  "permission": {
+    "read": "doc.openid == auth.uid",
+    "create": "true",
+    "update": "doc.openid == auth.uid",
+    "delete": "doc.openid == auth.uid"
+  },
+  "properties": {
+    "_id": {
+      "description": "系统自动生成"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "用户唯一标识"
+    },
+    "habitId": {
+      "bsonType": "string",
+      "description": "关联的习惯ID"
+    },
+    "date": {
+      "bsonType": "string",
+      "description": "打卡日期 YYYY-MM-DD"
+    },
+    "timestamp": {
+      "bsonType": "number",
+      "description": "打卡时间戳"
+    }
+  }
+}

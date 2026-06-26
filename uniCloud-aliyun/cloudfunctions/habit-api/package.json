@@ -1,0 +1,7 @@
+{
+  "name": "habit-api",
+  "version": "1.0.0",
+  "description": "Habit Tracker API",
+  "main": "index.js",
+  "dependencies": {}
+}

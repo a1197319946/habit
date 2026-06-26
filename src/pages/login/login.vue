@@ -67,6 +67,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useUserStore } from '@/store/user';
+import { useHabitStore } from '@/store/habit';
+import { cloud } from '@/utils/cloud';
 
 const userStore = useUserStore();
 
@@ -103,42 +105,52 @@ const handleLogin = async () => {
   uni.showLoading({ title: '登录中...' });
   
   try {
-    // 1. 获取 OpenID
-    const { result } = await wx.cloud.callFunction({ name: 'login' });
+    // 1. 获取登录 code
+    const loginRes = await new Promise((resolve, reject) => {
+      uni.login({
+        provider: 'weixin',
+        success: resolve,
+        fail: reject
+      });
+    });
+
+    // 2. 获取 OpenID
+    const { result } = await cloud.callFunction({ 
+      name: 'user-center',
+      data: { action: 'login', code: loginRes.code }
+    });
+    
+    if (result.code !== 0) {
+      throw new Error(result.msg || '获取 openid 失败');
+    }
     const openid = result.openid;
     userStore.setOpenid(openid);
 
-    // 2. 上传头像到云存储
-    const cloudPath = `avatars/${openid}-${Date.now()}.jpg`;
-    const uploadRes = await wx.cloud.uploadFile({
-      cloudPath: cloudPath,
-      filePath: avatarUrl.value,
-    });
-    const fileID = uploadRes.fileID;
+    // 3. 上传头像到 uniCloud
+    let fileID = avatarUrl.value;
+    if (avatarUrl.value && !avatarUrl.value.startsWith('http') && !avatarUrl.value.startsWith('cloud://')) {
+      try {
+        const cloudPath = `avatars/${openid}-${Date.now()}.jpg`;
+        const uploadRes = await cloud.uploadFile({
+          cloudPath: cloudPath,
+          filePath: avatarUrl.value,
+        });
+        fileID = uploadRes.fileID;
+      } catch (uploadErr) {
+        console.warn('头像上传失败，使用原图', uploadErr);
+      }
+    }
 
-    // 3. 更新全局状态
+    // 4. 更新全局状态
     userStore.setUserInfo({
       avatarUrl: fileID,
       nickName: nickName.value
     });
     userStore.saveToStorage();
 
-    // 4. 保存到云数据库
-    const db = wx.cloud.database();
-    try {
-      const userRes = await db.collection('users').where({ _openid: openid }).get();
-      if (userRes.data.length > 0) {
-        await db.collection('users').doc(userRes.data[0]._id).update({
-          data: { avatarUrl: fileID, nickName: nickName.value, updateTime: db.serverDate() }
-        });
-      } else {
-        await db.collection('users').add({
-          data: { avatarUrl: fileID, nickName: nickName.value, createTime: db.serverDate() }
-        });
-      }
-    } catch (dbErr) {
-      console.error('DB Error', dbErr);
-    }
+    // 5. 初始化用户习惯数据
+    const habitStore = useHabitStore();
+    await habitStore.initFromCloud(openid);
 
     uni.hideLoading();
     uni.showToast({ title: '登录成功', icon: 'success' });
@@ -147,9 +159,9 @@ const handleLogin = async () => {
     }, 1000);
 
   } catch (err) {
+    console.error('Login error', err);
     uni.hideLoading();
-    console.error(err);
-    uni.showToast({ title: '登录失败，请重试', icon: 'none' });
+    uni.showToast({ title: '登录失败: ' + (err.message || '未知错误'), icon: 'none' });
   }
 };
 

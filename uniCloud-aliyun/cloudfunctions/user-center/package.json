@@ -1,0 +1,7 @@
+{
+  "name": "user-center",
+  "version": "1.0.0",
+  "description": "User Center for WeChat Login",
+  "main": "index.js",
+  "dependencies": {}
+}
