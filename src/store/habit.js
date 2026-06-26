@@ -28,6 +28,15 @@ export const useHabitStore = defineStore('habit', {
       return userStore.openid;
     },
 
+    async ensureOpenId() {
+      const userStore = useUserStore();
+      let openid = userStore.openid;
+      if (!openid) {
+        openid = await userStore.silentLogin();
+      }
+      return openid;
+    },
+
     saveToStorage() {
       uni.setStorageSync('habits', this.habits);
       uni.setStorageSync('moods', this.moods);
@@ -58,16 +67,10 @@ export const useHabitStore = defineStore('habit', {
     },
     
     async addHabit(habit) {
-      let openid = this.getOpenId();
+      const openid = await this.ensureOpenId();
       if (!openid) {
-        // 尝试再次静默登录
-        const userStore = useUserStore();
-        openid = await userStore.silentLogin();
-        
-        if (!openid) {
-          uni.showToast({ title: '无法获取登录凭证，请稍后再试', icon: 'none' });
-          return Promise.reject(new Error('缺少openid'));
-        }
+        uni.showToast({ title: '无法获取登录凭证，请稍后再试', icon: 'none' });
+        return Promise.reject(new Error('缺少openid'));
       }
       try {
         const { result } = await cloud.callFunction({
@@ -94,7 +97,7 @@ export const useHabitStore = defineStore('habit', {
     },
     
     async updateHabit(updatedHabit) {
-      const openid = this.getOpenId();
+      const openid = await this.ensureOpenId();
       if (!openid) return;
       
       const index = this.habits.findIndex(h => h.id === updatedHabit.id);
@@ -111,7 +114,7 @@ export const useHabitStore = defineStore('habit', {
     },
     
     async deleteHabit(id) {
-      const openid = this.getOpenId();
+      const openid = await this.ensureOpenId();
       if (!openid) return;
       
       // Optimistic update
@@ -127,7 +130,7 @@ export const useHabitStore = defineStore('habit', {
     },
     
     async checkin(habitId, targetDate = null) {
-      const openid = this.getOpenId();
+      const openid = await this.ensureOpenId();
       if (!openid) {
         uni.showToast({ title: '系统初始化中或未登录，请稍后再试', icon: 'none' });
         return Promise.reject(new Error('缺少openid'));
@@ -167,7 +170,7 @@ export const useHabitStore = defineStore('habit', {
     },
     
     async undoCheckin(habitId, targetDate = null) {
-      const openid = this.getOpenId();
+      const openid = await this.ensureOpenId();
       if (!openid) return;
       const today = new Date().toISOString().split('T')[0];
       const dateStr = targetDate || today;
@@ -183,7 +186,7 @@ export const useHabitStore = defineStore('habit', {
     },
     
     async addMood(moodRecord) {
-      const openid = this.getOpenId();
+      const openid = await this.ensureOpenId();
       if (!openid) return;
       
       const tempId = Date.now().toString();
