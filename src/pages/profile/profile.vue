@@ -25,7 +25,13 @@
         <view class="item-arrow">›</view>
       </view>
       
-
+      <button class="list-item flex-row items-center justify-between menu-btn" open-type="feedback">
+        <view class="item-left flex-row items-center">
+          <uni-icons type="chat" size="24" color="var(--primary)" class="item-icon-ui"></uni-icons>
+          <text class="item-text">建议与反馈</text>
+        </view>
+        <view class="item-arrow">›</view>
+      </button>
       
       <view class="list-item flex-row items-center justify-between" @click="showAbout">
         <view class="item-left flex-row items-center">
@@ -154,7 +160,7 @@ const saveProfile = async () => {
 const showAbout = () => {
   uni.showModal({
     title: '关于小习惯打卡',
-    content: '版本：v1.0.0\n愿你在坚持中遇见更好的自己！',
+    content: '版本：v1.0.0\n愿你在坚持中遇见更好的自己！\n\n小程序还在打磨优化，将永久免费开放使用，欢迎深度体验！',
     showCancel: false,
     confirmText: '我知道了',
     confirmColor: '#4F46E5'

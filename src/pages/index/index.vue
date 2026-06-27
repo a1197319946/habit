@@ -1,5 +1,7 @@
 <template>
   <view class="home-container">
+    <!-- Immersive Background -->
+    <view class="immersive-bg"></view>
     
     <!-- Custom Navigation Bar -->
     <view class="custom-navbar" :style="{ paddingTop: statusBarHeight + 'px' }">
@@ -104,7 +106,7 @@
     <!-- Bottom Banner -->
     <view class="bottom-banner">
       <view class="banner-content">
-        <text class="banner-title">每一次坚持，都是更好的自己</text>
+        <text class="banner-title">小小坚持，大大改变</text>
         <text class="banner-subtitle">今天也要加油哦！<text class="emoji">💪</text></text>
       </view>
       <view class="banner-illustration">
@@ -469,11 +471,22 @@ const handleMoodSubmit = (moodData) => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #F0F4FF 0%, #F8FAFC 30%, #F8FAFC 100%);
+  background: #FFFFFF;
   padding: 4px 16px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   position: relative;
+}
+
+.immersive-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 380px;
+  background: linear-gradient(180deg, #E2CBFF 0%, #F2E6FF 45%, rgba(255,255,255,0) 100%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .header-bg-img {
@@ -565,13 +578,10 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .calendar-widget {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 18px 0;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03);
+  background: transparent;
+  padding: 12px 0 16px 0;
   overflow: hidden;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 
 .calendar-inner {
@@ -598,7 +608,8 @@ const handleMoodSubmit = (moodData) => {
 .day-label {
   font-size: 12px;
   color: #6B7280;
-  margin-bottom: 6px;
+  margin-top: 16px;
+  margin-bottom: 0px;
 }
 
 .day-content {
@@ -606,24 +617,25 @@ const handleMoodSubmit = (moodData) => {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 6px 0;
-  border-radius: 20px;
+  padding: 10px 0;
+  border-radius: 18px;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   
   &.is-selected-pill {
-    background-color: #EEF2FF;
+    background-color: #FFFFFF;
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.08);
   }
 }
 
 .day-number {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
   margin-bottom: 6px;
   
   &.is-selected-text {
-    color: #F59E0B;
+    color: #8B5CF6;
   }
   
   &.is-future-text {
@@ -664,7 +676,7 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .habits-section {
-  margin-top: 16px;
+  margin-top: 4px;
   margin-bottom: 16px;
   flex: 1;
 }
@@ -692,12 +704,12 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .habit-card {
-  background: var(--surface, #ffffff);
-  border-radius: var(--radius-lg, 16px);
+  background: #FFFFFF;
+  border-radius: 20px;
   padding: 16px 8px;
-  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.05));
+  box-shadow: 0 6px 20px rgba(0,0,0,0.03);
   transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-  border: 1px solid transparent;
+  border: 1px solid #F3F4F6;
   
   &:active {
     transform: scale(0.92);
@@ -705,7 +717,7 @@ const handleMoodSubmit = (moodData) => {
   
   &.is-checked {
     background: #ECFDF5;
-    border: 1px solid rgba(16, 185, 129, 0.15);
+    border: 1px solid transparent;
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12), 0 3px 6px rgba(16, 185, 129, 0.08);
   }
@@ -780,15 +792,15 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .bottom-banner {
-  background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 100%);
+  background: linear-gradient(135deg, #D0B3FF 0%, #E8D5FF 100%);
   border-radius: 20px;
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 12px 40px rgba(208, 179, 255, 0.6);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* allows soft shadow to fully bloom if needed */
   margin-top: auto;
   
   &::before {
