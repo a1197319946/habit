@@ -69,7 +69,7 @@
           <text class="form-hint">点击更换头像 (可选微信头像)</text>
           
           <view class="nickname-wrapper flex-row items-center">
-            <input type="nickname" class="nickname-input" placeholder="请输入或获取微信昵称" :value="tempNickName" @blur="onNicknameInput" @change="onNicknameInput"/>
+            <input type="nickname" class="nickname-input" placeholder="请输入或获取微信昵称" :value="tempNickName" @input="onNicknameInput" @blur="onNicknameInput" @change="onNicknameInput"/>
           </view>
         </view>
         
@@ -133,7 +133,13 @@ const saveProfile = async () => {
   try {
     let fileID = tempAvatarUrl.value;
     const openid = userStore.openid;
-    if (openid && tempAvatarUrl.value && !tempAvatarUrl.value.startsWith('http') && !tempAvatarUrl.value.startsWith('cloud://')) {
+    
+    // Check if it's a WeChat temporary file that needs uploading
+    const isTempFile = tempAvatarUrl.value.startsWith('wxfile://') || 
+                       tempAvatarUrl.value.startsWith('http://tmp/') || 
+                       tempAvatarUrl.value.startsWith('wdfile://');
+                       
+    if (openid && tempAvatarUrl.value && isTempFile) {
       const cloudPath = `avatars/${openid}-${Date.now()}.jpg`;
       const uploadRes = await cloud.uploadFile({
         cloudPath: cloudPath,
@@ -154,7 +160,11 @@ const saveProfile = async () => {
   } catch (err) {
     console.error('Save profile error', err);
     uni.hideLoading();
-    uni.showToast({ title: '保存失败: ' + (err.message || '未知错误'), icon: 'none' });
+    let errMsg = err.message || String(err);
+    if (errMsg.includes('url not in domain list')) {
+      errMsg = '请在开发者工具详情中勾选“不校验合法域名”';
+    }
+    uni.showToast({ title: '保存失败: ' + errMsg, icon: 'none', duration: 3000 });
   }
 };
 

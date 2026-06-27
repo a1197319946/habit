@@ -52,7 +52,7 @@
         <view class="form-item flex-col">
           <text class="label">打卡目标</text>
           
-          <view class="tabs flex-row" style="margin-bottom: 12px; opacity: 0.6;">
+          <view class="tabs disabled-tabs flex-row" style="margin-bottom: 12px;">
             <view 
               class="tab-item flex-row items-center justify-center"
               :class="{ 'is-active': habit.goalType === 'frequency' }"
@@ -65,16 +65,16 @@
             >总量目标</view>
           </view>
           
-          <view class="tabs flex-row">
+          <view class="tabs disabled-tabs flex-row">
             <view 
               class="tab-item flex-row items-center justify-center"
               :class="{ 'is-active': habit.frequencyType === 'weekly' }"
-              @click="habit.frequencyType = 'weekly'"
+              @click="showEditGoalToast"
             >按周</view>
             <view 
               class="tab-item flex-row items-center justify-center"
               :class="{ 'is-active': habit.frequencyType === 'monthly' }"
-              @click="habit.frequencyType = 'monthly'"
+              @click="showEditGoalToast"
             >按月</view>
           </view>
 
@@ -216,7 +216,7 @@ onLoad((options) => {
 });
 
 const showEditGoalToast = () => {
-  uni.showToast({ title: '不可编辑，可以重新创建习惯', icon: 'none' });
+  uni.showToast({ title: '设定好的目标类型不可修改哦，如需修改请重新创建习惯', icon: 'none' });
 };
 
 const save = () => {
@@ -378,6 +378,14 @@ onShareTimeline(() => {
     background: var(--surface);
     color: var(--text-main);
     box-shadow: var(--shadow-sm);
+  }
+}
+
+.disabled-tabs {
+  opacity: 0.6;
+  
+  .tab-item.is-active {
+    color: var(--text-muted);
   }
 }
 
