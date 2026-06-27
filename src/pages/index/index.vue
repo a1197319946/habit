@@ -1,5 +1,6 @@
 <template>
   <view class="home-container">
+    
     <!-- Custom Navigation Bar -->
     <view class="custom-navbar" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="navbar-content flex-row items-center">
@@ -15,14 +16,8 @@
     </view>
 
     <!-- Header Section -->
-    <view class="header-section flex-row items-center justify-between">
-      <view class="header-text flex-col">
-        <text class="greeting flex-row items-center">
-          坚持打卡
-          <text class="sparkle">✨</text>
-        </text>
-        <text class="sub-greeting">自律生活，从点滴做起...</text>
-      </view>
+    <view class="header-section flex-row items-center" style="justify-content: flex-end;">
+      <image src="/static/images/header_bg.png" class="header-bg-img" mode="widthFix" />
       <view class="hero-illustration">
         <view class="dynamic-calendar">
           <view class="cal-top"></view>
@@ -68,7 +63,6 @@
     <view class="habits-section">
       <view class="section-header flex-row justify-between items-center">
         <view class="flex-row items-center">
-          <text class="section-title">我的习惯</text>
         </view>
         <view class="manage-btn" @click="goToManage">
           <text>管理习惯</text>
@@ -421,15 +415,7 @@ const handleMoodSubmit = (moodData) => {
 </script>
 
 <style lang="scss" scoped>
-.home-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #F0F4FF 0%, #F8FAFC 30%, #F8FAFC 100%);
-  padding: 4px 16px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+
 
 .custom-navbar {
   width: 100%;
@@ -479,31 +465,36 @@ const handleMoodSubmit = (moodData) => {
   font-weight: 500;
 }
 
-.header-section {
-  padding: 4px 0 20px;
+.home-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #F0F4FF 0%, #F8FAFC 30%, #F8FAFC 100%);
+  padding: 4px 16px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  position: relative;
 }
 
-.header-text {
-  flex: 1;
-  .greeting {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text-main);
-    margin-bottom: 6px;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    
-    .sparkle {
-      font-size: 13px;
-      margin-left: 2px;
-    }
-  }
-  
-  .sub-greeting {
-    font-size: 14px;
-    color: var(--text-light);
-  }
+.header-bg-img {
+  position: absolute;
+  top: -4px;
+  left: -10px;
+  width: calc(100% + 20px);
+  height: auto;
+  z-index: 0;
+}
+
+.custom-navbar, .calendar-widget, .habits-section, .bottom-banner {
+  position: relative;
+  z-index: 1;
+}
+
+.header-section {
+  position: relative;
+  padding: 4px 0 20px;
+  height: 72px; 
+  margin-bottom: 24px;
 }
 
 .hero-illustration {
@@ -517,6 +508,8 @@ const handleMoodSubmit = (moodData) => {
   justify-content: center;
   box-shadow: 0 10px 25px rgba(99, 102, 241, 0.1);
   transform: rotate(4deg);
+  margin-right: 28px;
+  top: 20px;
   .dynamic-calendar {
     width: 44px;
     height: 48px;
@@ -578,6 +571,7 @@ const handleMoodSubmit = (moodData) => {
   padding: 18px 0;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03);
   overflow: hidden;
+  margin-top: 12px;
 }
 
 .calendar-inner {
@@ -670,7 +664,7 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .habits-section {
-  margin-top: 28px;
+  margin-top: 16px;
   margin-bottom: 16px;
   flex: 1;
 }

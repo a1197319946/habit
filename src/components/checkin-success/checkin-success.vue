@@ -2,7 +2,7 @@
   <view class="popup-mask flex-col items-center justify-center" @click="close">
     <view class="popup-content flex-col items-center" @click.stop>
       <view class="success-graphic flex-col items-center justify-center">
-        <image src="/static/images/bunny_success.png" class="success-img" mode="aspectFill" />
+        <image src="/static/images/bunny_success.png" class="success-img" mode="aspectFit" />
       </view>
       <view class="title-container flex-row items-center justify-center">
         <uni-icons type="star-filled" size="22" color="#fbbf24" class="sparkle-icon"></uni-icons>
@@ -62,12 +62,12 @@ const recordMood = () => {
   width: 100%;
   margin-bottom: 12px;
   position: relative;
+  padding-top: 20px;
 }
 
 .success-img {
-  width: 100%;
-  height: 220px;
-  border-radius: 32px 32px 0 0;
+  width: 160px;
+  height: 160px;
 }
 
 .title-container {
