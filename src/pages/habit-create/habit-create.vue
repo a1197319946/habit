@@ -49,57 +49,72 @@
           </swiper>
         </view>
 
-        <!-- Frequency -->
+        <!-- Goal Settings -->
         <view class="form-item flex-col">
-          <text class="label">打卡周期 <text class="required">*</text></text>
+          <text class="label">打卡目标 <text class="required">*</text></text>
+          
+          <view class="tabs flex-row" style="margin-bottom: 12px;">
+            <view 
+              class="tab-item flex-row items-center justify-center"
+              :class="{ 'is-active': formData.goalType === 'frequency' }"
+              @click="formData.goalType = 'frequency'"
+            >次数目标</view>
+            <view 
+              class="tab-item flex-row items-center justify-center"
+              :class="{ 'is-active': formData.goalType === 'amount' }"
+              @click="formData.goalType = 'amount'"
+            >总量目标</view>
+          </view>
+          
           <view class="tabs flex-row">
             <view 
               class="tab-item flex-row items-center justify-center"
-              :class="{ 'is-active': formData.cycleType === 'fixed' }"
-              @click="formData.cycleType = 'fixed'"
-            >固定打卡</view>
+              :class="{ 'is-active': formData.frequencyType === 'weekly' }"
+              @click="formData.frequencyType = 'weekly'"
+            >按周</view>
             <view 
               class="tab-item flex-row items-center justify-center"
-              :class="{ 'is-active': formData.cycleType === 'weekly' }"
-              @click="formData.cycleType = 'weekly'"
-            >按周打卡</view>
-            <view 
-              class="tab-item flex-row items-center justify-center"
-              :class="{ 'is-active': formData.cycleType === 'monthly' }"
-              @click="formData.cycleType = 'monthly'"
-            >按月打卡</view>
+              :class="{ 'is-active': formData.frequencyType === 'monthly' }"
+              @click="formData.frequencyType = 'monthly'"
+            >按月</view>
           </view>
-          
+
           <!-- Cycle Sub Options -->
           <view class="cycle-options flex-col">
-            <!-- Fixed Days -->
-            <view v-if="formData.cycleType === 'fixed'" class="flex-row fixed-days">
-              <view 
-                v-for="(day, index) in ['一','二','三','四','五','六','日']" 
-                :key="index"
-                class="day-circle flex-row items-center justify-center"
-                :class="{ 'is-active': formData.fixedDays.includes(index + 1) }"
-                @click="toggleFixedDay(index + 1)"
-              >{{ day }}</view>
-            </view>
-            
-            <!-- Weekly Days -->
-            <view v-if="formData.cycleType === 'weekly'" class="flex-row items-center justify-between step-control">
-              <text>每周目标天数</text>
-              <view class="stepper flex-row items-center">
-                <view class="step-btn" @click="formData.weeklyTarget > 1 && formData.weeklyTarget--">-</view>
-                <text class="step-val">{{ formData.weeklyTarget }}</text>
-                <view class="step-btn" @click="formData.weeklyTarget < 7 && formData.weeklyTarget++">+</view>
+            <!-- Frequency Goal Inputs -->
+            <view v-if="formData.goalType === 'frequency'">
+              <view v-if="formData.frequencyType === 'weekly'" class="flex-row items-center justify-between step-control">
+                <text>每周目标次数</text>
+                <view class="stepper flex-row items-center">
+                  <view class="step-btn" @click="formData.weeklyTarget > 1 && formData.weeklyTarget--">-</view>
+                  <text class="step-val">{{ formData.weeklyTarget }}</text>
+                  <view class="step-btn" @click="formData.weeklyTarget < 7 && formData.weeklyTarget++">+</view>
+                </view>
+              </view>
+              
+              <view v-if="formData.frequencyType === 'monthly'" class="flex-row items-center justify-between step-control">
+                <text>每月目标次数</text>
+                <view class="stepper flex-row items-center">
+                  <view class="step-btn" @click="formData.monthlyTarget > 1 && formData.monthlyTarget--">-</view>
+                  <text class="step-val">{{ formData.monthlyTarget }}</text>
+                  <view class="step-btn" @click="formData.monthlyTarget < 31 && formData.monthlyTarget++">+</view>
+                </view>
               </view>
             </view>
-
-            <!-- Monthly Days -->
-            <view v-if="formData.cycleType === 'monthly'" class="flex-row items-center justify-between step-control">
-              <text>每月目标天数</text>
-              <view class="stepper flex-row items-center">
-                <view class="step-btn" @click="formData.monthlyTarget > 1 && formData.monthlyTarget--">-</view>
-                <text class="step-val">{{ formData.monthlyTarget }}</text>
-                <view class="step-btn" @click="formData.monthlyTarget < 31 && formData.monthlyTarget++">+</view>
+            
+            <!-- Amount Goal Inputs -->
+            <view v-if="formData.goalType === 'amount'" class="flex-col amount-settings">
+              <view class="flex-row items-center justify-between amount-row">
+                <text class="amount-label">{{ formData.frequencyType === 'weekly' ? '每周' : '每月' }}目标总量</text>
+                <view class="flex-row items-center amount-inputs">
+                  <input class="amount-input" type="digit" v-model.number="formData.amountValue" placeholder="0" />
+                  <picker class="unit-picker" mode="selector" :range="unitOptions" @change="onUnitChange">
+                    <view class="picker-display flex-row items-center">
+                      <text class="unit-text">{{ formData.amountUnit }}</text>
+                      <text class="unit-arrow">▼</text>
+                    </view>
+                  </picker>
+                </view>
               </view>
             </view>
           </view>
@@ -166,30 +181,27 @@ const iconPages = computed(() => {
   return pages;
 });
 
+const unitOptions = ['km', '公里', '米', '分钟', '小时', '组', '次', '页'];
+const onUnitChange = (e) => {
+  formData.amountUnit = unitOptions[e.detail.value];
+};
+
 const formData = reactive({
   name: '',
   color: allColors[0],
   icon: icons[0],
-  cycleType: 'fixed',
-  fixedDays: [1, 2, 3, 4, 5],
+  goalType: 'frequency',
+  frequencyType: 'weekly',
   weeklyTarget: 3,
-  monthlyTarget: 10
+  monthlyTarget: 10,
+  amountValue: '',
+  amountUnit: 'km'
 });
 
 const isSubmitting = ref(false);
 
-const toggleFixedDay = (day) => {
-  const idx = formData.fixedDays.indexOf(day);
-  if (idx > -1) {
-    if (formData.fixedDays.length > 1) {
-      formData.fixedDays.splice(idx, 1);
-    } else {
-      uni.showToast({ title: '至少选择一天', icon: 'none' });
-    }
-  } else {
-    formData.fixedDays.push(day);
-  }
-};
+// unused now
+const toggleFixedDay = () => {};
 
 const submit = async () => {
   if (isSubmitting.value) return;
@@ -211,6 +223,13 @@ const submit = async () => {
   if (specialChars.test(trimmedName)) {
     uni.showToast({ title: '习惯名称不能包含特殊字符', icon: 'none' });
     return;
+  }
+  
+  if (formData.goalType === 'amount') {
+    if (!formData.amountValue || formData.amountValue <= 0) {
+      uni.showToast({ title: '请输入正确的目标总量', icon: 'none' });
+      return;
+    }
   }
   
   isSubmitting.value = true;
@@ -466,5 +485,55 @@ onShareTimeline(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.amount-settings {
+  gap: 12px;
+}
+
+.amount-row {
+  height: 48px;
+}
+
+.amount-label {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.amount-inputs {
+  gap: 8px;
+}
+
+.amount-input {
+  width: 80px;
+  height: 36px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--primary);
+  border: 1px solid var(--border-light);
+}
+
+.picker-display {
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  
+  .unit-text {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-right: 4px;
+  }
+  
+  .unit-arrow {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
 }
 </style>

@@ -98,7 +98,9 @@
           </view>
           
           <text class="habit-name" :class="{ 'text-checked': isCheckedInSelectedDate(habit.id) }">{{ habit.name }}</text>
-          <text class="habit-time" :class="{ 'text-checked': isCheckedInSelectedDate(habit.id) }">本月已坚持 {{ getMonthlyStreak(habit.id) }}天</text>
+          <text class="habit-time" :class="{ 'text-checked': isCheckedInSelectedDate(habit.id) }">
+            {{ getHabitProgressText(habit.id) }}
+          </text>
         </view>
       </view>
     </view>
@@ -120,17 +122,24 @@
     </view>
 
     <checkin-success 
-      v-if="showSuccess" 
+      ref="checkinSuccessRef"
       :habit="currentHabit"
-      @close="showSuccess = false" 
+      :date="selectedDate"
       @record="openMoodRecorder" 
+    />
+    
+    <amount-checkin-popup 
+      ref="amountPopupRef"
+      :habit="currentHabit"
+      :accumulatedAmount="currentHabitAccumulated"
+      :initialAmount="currentHabitInitialAmount"
+      @submit="handleAmountSubmit"
     />
 
     <mood-recorder 
-      v-if="showMoodRecorder"
+      ref="moodRecorderRef"
       :habit-id="currentHabit?.id"
       :habit-name="currentHabit?.name"
-      @close="showMoodRecorder = false"
       @submit="handleMoodSubmit"
     />
   </view>
@@ -143,25 +152,30 @@ import { storeToRefs } from 'pinia';
 import { useHabitStore } from '@/store/habit';
 import { useUserStore } from '@/store/user';
 import MoodRecorder from '@/components/mood-recorder/mood-recorder.vue';
+import AmountCheckinPopup from '@/components/amount-checkin-popup/amount-checkin-popup.vue';
 
 const habitStore = useHabitStore();
 const userStore = useUserStore();
 
 const statusBarHeight = ref(44);
-const showSuccess = ref(false);
-const showMoodRecorder = ref(false);
+const checkinSuccessRef = ref(null);
+const moodRecorderRef = ref(null);
 const showConfetti = ref(false);
 const confettiParticles = ref([]);
 const currentHabit = ref(null);
 const pastWeekDays = ref([]);
 const currentWeekDays = ref([]);
+const futureWeekDays = ref([]);
+
+const amountPopupRef = ref(null);
+const currentHabitInitialAmount = ref(null);
+const currentHabitAccumulated = ref(0);
 
 // 开启微信分享给朋友
 onShareAppMessage(() => {
   return {
     title: '小习惯 - 坚持每天微小的改变',
     path: '/pages/index/index',
-    // imageUrl: '/static/share-bg.jpg' // 可选：配置自定义分享卡片图片
   };
 });
 
@@ -171,7 +185,6 @@ onShareTimeline(() => {
     title: '小习惯 - 坚持每天微小的改变'
   };
 });
-const futureWeekDays = ref([]);
 
 const { getHabits: habits } = storeToRefs(habitStore);
 const _today = new Date();
@@ -315,9 +328,45 @@ const isCheckedInSelectedDate = (habitId) => {
   return habitStore.getCheckinsByDate(selectedDate.value).some(c => c.habitId === habitId);
 };
 
-const getMonthlyStreak = (habitId) => {
+const getHabitProgressText = (habitId) => {
+  const habit = habits.value.find(h => h.id === habitId);
+  if (!habit) return '';
+  const freqLabel = habit.frequencyType === 'weekly' ? '周' : '月';
+  
   const checkins = habitStore.getCheckins.filter(c => c.habitId === habitId);
-  return checkins.length;
+  const [y, m, d] = selectedDate.value.split('-');
+  const now = new Date(y, m - 1, d);
+  
+  let periodCheckins = [];
+  if (habit.frequencyType === 'weekly') {
+    const day = now.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diff);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const startStr = [monday.getFullYear(), String(monday.getMonth()+1).padStart(2,'0'), String(monday.getDate()).padStart(2,'0')].join('-');
+    const endStr = [sunday.getFullYear(), String(sunday.getMonth()+1).padStart(2,'0'), String(sunday.getDate()).padStart(2,'0')].join('-');
+    
+    periodCheckins = checkins.filter(c => c.date >= startStr && c.date <= endStr);
+  } else {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const startStr = [firstDay.getFullYear(), String(firstDay.getMonth()+1).padStart(2,'0'), String(firstDay.getDate()).padStart(2,'0')].join('-');
+    const endStr = [lastDay.getFullYear(), String(lastDay.getMonth()+1).padStart(2,'0'), String(lastDay.getDate()).padStart(2,'0')].join('-');
+    periodCheckins = checkins.filter(c => c.date >= startStr && c.date <= endStr);
+  }
+  
+  if (habit.goalType === 'amount') {
+    const acc = periodCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const target = habit.amountValue || 0;
+    return `${freqLabel}: ${acc}/${target} ${habit.amountUnit || ''}`;
+  } else {
+    const acc = periodCheckins.length;
+    const target = habit.frequencyType === 'weekly' ? (habit.weeklyTarget || 3) : (habit.monthlyTarget || 10);
+    return `${freqLabel}: ${acc}/${target}次`;
+  }
 };
 
 const triggerConfetti = () => {
@@ -369,27 +418,98 @@ const handleCheckin = (habitId) => {
     uni.showToast({ title: '不能在未来打卡哦', icon: 'none' });
     return;
   }
+  
+  const habit = habits.value.find(h => h.id === habitId);
+  currentHabit.value = habit;
 
-  if (isCheckedInSelectedDate(habitId)) {
-    uni.showModal({
-      title: '提示',
-      content: '确定要撤销该日的打卡吗？',
-      success: (res) => {
-        if (res.confirm) {
-          habitStore.undoCheckin(habitId, selectedDate.value);
-        }
-      }
-    });
+  const stats = getHabitProgressText(habitId); // Just to reuse the loop if we want, but actually we need accumulated amount below:
+  // Re-calculate accumulated amount for the popup since we removed getAccumulatedAmount
+  const checkins = habitStore.getCheckins.filter(c => c.habitId === habitId);
+  const [y, m, d] = selectedDate.value.split('-');
+  const now = new Date(y, m - 1, d);
+  let periodCheckins = [];
+  if (habit.frequencyType === 'weekly') {
+    const day = now.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diff);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const startStr = [monday.getFullYear(), String(monday.getMonth()+1).padStart(2,'0'), String(monday.getDate()).padStart(2,'0')].join('-');
+    const endStr = [sunday.getFullYear(), String(sunday.getMonth()+1).padStart(2,'0'), String(sunday.getDate()).padStart(2,'0')].join('-');
+    periodCheckins = checkins.filter(c => c.date >= startStr && c.date <= endStr);
   } else {
-    habitStore.checkin(habitId, selectedDate.value);
-    currentHabit.value = habits.value.find(h => h.id === habitId);
-    
-    triggerConfetti();
-    
-    setTimeout(() => {
-      showSuccess.value = true;
-    }, 1200);
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const startStr = [firstDay.getFullYear(), String(firstDay.getMonth()+1).padStart(2,'0'), String(firstDay.getDate()).padStart(2,'0')].join('-');
+    const endStr = [lastDay.getFullYear(), String(lastDay.getMonth()+1).padStart(2,'0'), String(lastDay.getDate()).padStart(2,'0')].join('-');
+    periodCheckins = checkins.filter(c => c.date >= startStr && c.date <= endStr);
   }
+  currentHabitAccumulated.value = periodCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  const existingCheckin = habitStore.getCheckinsByDate(selectedDate.value).find(c => c.habitId === habitId);
+
+  if (existingCheckin) {
+    uni.hideTabBar();
+    if (habit.goalType === 'amount') {
+      uni.showActionSheet({
+        itemList: ['修改数据', '撤销打卡'],
+        itemColor: '#111827',
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            // Modify
+            currentHabitInitialAmount.value = Number(existingCheckin.amount) || 0;
+            amountPopupRef.value?.open();
+          } else if (res.tapIndex === 1) {
+            // Undo
+            habitStore.undoCheckin(habitId, selectedDate.value);
+          }
+        },
+        fail: () => {
+          uni.showTabBar();
+        },
+        complete: (res) => {
+          // If tapIndex is undefined, user dismissed the sheet without selecting
+          if (res.errMsg && res.errMsg.indexOf('cancel') > -1) {
+            uni.showTabBar();
+          } else if (res.tapIndex === 1) {
+            // On undo, we show tab bar
+            uni.showTabBar();
+          }
+          // On modify, amount popup will open, so it handles tab bar.
+        }
+      });
+    } else {
+      uni.showActionSheet({
+        itemList: ['撤销打卡'],
+        itemColor: '#111827',
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            habitStore.undoCheckin(habitId, selectedDate.value);
+          }
+        },
+        complete: () => {
+          uni.showTabBar();
+        }
+      });
+    }
+  } else {
+    if (habit.goalType === 'amount') {
+      currentHabitInitialAmount.value = null;
+      amountPopupRef.value?.open();
+    } else {
+      habitStore.checkin(habitId, selectedDate.value);
+      triggerConfetti();
+      setTimeout(() => { checkinSuccessRef.value?.open(); }, 1200);
+    }
+  }
+};
+
+const handleAmountSubmit = (amountValue) => {
+  habitStore.checkin(currentHabit.value.id, selectedDate.value, amountValue);
+  triggerConfetti();
+  setTimeout(() => { checkinSuccessRef.value?.open(); }, 1200);
 };
 
 const goToAddHabit = () => {
@@ -405,13 +525,15 @@ const goToManage = () => {
 };
 
 const openMoodRecorder = () => {
-  showSuccess.value = false;
-  showMoodRecorder.value = true;
+  checkinSuccessRef.value?.close();
+  setTimeout(() => {
+    moodRecorderRef.value?.open();
+  }, 300);
 };
 
 const handleMoodSubmit = (moodData) => {
   habitStore.addMood(moodData);
-  showMoodRecorder.value = false;
+  moodRecorderRef.value?.close();
   uni.showToast({ title: '心情已记录', icon: 'success' });
 };
 </script>

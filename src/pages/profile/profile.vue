@@ -51,14 +51,14 @@
     </view>
 
     <!-- Profile Edit Popup -->
-    <view v-if="showProfilePopup" class="popup-mask flex-col justify-end" @click="closeProfilePopup">
-      <view class="popup-content flex-col" @click.stop>
-        <view class="header flex-row items-center justify-between">
+    <uni-popup ref="profilePopupRef" type="bottom" :safe-area="false">
+      <view class="popup-content flex-col">
+        <view class="popup-header flex-row items-center justify-between">
           <view class="date-info flex-col">
-            <text class="title">完善个人资料</text>
+            <text class="popup-title">完善个人资料</text>
             <text class="subtitle">让大家认识你</text>
           </view>
-          <view class="close-icon" @click="closeProfilePopup">✕</view>
+          <uni-icons type="closeempty" size="20" color="#9CA3AF" @click="closeProfilePopup"></uni-icons>
         </view>
         
         <view class="form-body flex-col items-center w-full" style="padding-top: 16px;">
@@ -79,7 +79,7 @@
           </view>
         </view>
       </view>
-    </view>
+    </uni-popup>
   </view>
 </template>
 
@@ -90,7 +90,7 @@ import { useUserStore } from '@/store/user';
 import { cloud } from '@/utils/cloud';
 
 const userStore = useUserStore();
-const showProfilePopup = ref(false);
+const profilePopupRef = ref(null);
 const tempAvatarUrl = ref('');
 const tempNickName = ref('');
 
@@ -101,8 +101,9 @@ onShow(() => {
   }
 });
 
+
 const closeProfilePopup = () => {
-  showProfilePopup.value = false;
+  profilePopupRef.value?.close();
 };
 
 const goTo = (url) => {
@@ -112,7 +113,7 @@ const goTo = (url) => {
 const handleProfileClick = () => {
   tempAvatarUrl.value = userStore.userInfo.avatarUrl || '';
   tempNickName.value = userStore.userInfo.nickName || '';
-  showProfilePopup.value = true;
+  profilePopupRef.value?.open();
 };
 
 const onChooseAvatar = (e) => {
@@ -149,7 +150,7 @@ const saveProfile = async () => {
     
     uni.hideLoading();
     uni.showToast({ title: '保存成功', icon: 'success' });
-    showProfilePopup.value = false;
+    profilePopupRef.value?.close();
   } catch (err) {
     console.error('Save profile error', err);
     uni.hideLoading();
@@ -160,7 +161,7 @@ const saveProfile = async () => {
 const showAbout = () => {
   uni.showModal({
     title: '关于小习惯打卡',
-    content: '版本：v1.0.0\n愿你在坚持中遇见更好的自己！\n\n小程序还在打磨优化，将永久免费开放使用，欢迎深度体验！',
+    content: '版本：v1.0.0\n愿你在坚持中遇见更好的自己！\n\n小程序还在打磨优化，将永久免费开放使用，欢迎深度体验！后续将继续推出 ios 版本！',
     showCancel: false,
     confirmText: '我知道了',
     confirmColor: '#4F46E5'
@@ -292,45 +293,25 @@ onShareTimeline(() => {
   }
 }
 
-.popup-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: var(--window-bottom, 0);
-  background: var(--uni-bg-color-mask, rgba(0, 0, 0, 0.4));
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  animation: fadeIn 0.2s ease-out;
-}
-
 .popup-content {
   width: 100%;
   box-sizing: border-box;
-  background: var(--surface);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: 16px 20px 24px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: #FFFFFF;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px;
 }
 
-.header {
-  margin-bottom: 16px;
-  .title {
+.popup-header {
+  margin-bottom: 24px;
+  .popup-title {
     font-size: 18px;
     font-weight: 700;
+    color: var(--text-main);
   }
   .subtitle {
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 4px;
-  }
-  .close-icon {
-    font-size: 20px;
-    color: var(--text-light);
-    padding: 4px;
   }
 }
 
@@ -404,13 +385,4 @@ onShareTimeline(() => {
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
 </style>

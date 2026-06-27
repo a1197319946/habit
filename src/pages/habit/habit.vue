@@ -38,7 +38,6 @@
           </view>
           <view class="habit-meta flex-col">
             <text class="habit-name">{{ habit.name }}</text>
-            <text class="habit-cycle">{{ getCycleLabel(habit.cycleType) }}</text>
           </view>
         </view>
         
@@ -140,14 +139,6 @@ const getTransform = (index) => {
   return 'translateY(0)';
 };
 
-const getCycleLabel = (type) => {
-  const map = {
-    'fixed': '固定打卡',
-    'weekly': '按周打卡',
-    'monthly': '按月打卡'
-  };
-  return map[type] || '固定打卡';
-};
 
 const goToAddHabit = () => {
   uni.navigateTo({ url: '/pages/habit-create/habit-create' });
@@ -257,10 +248,6 @@ onShareTimeline(() => {
   margin-bottom: 4px;
 }
 
-.habit-cycle {
-  font-size: 13px;
-  color: var(--text-light);
-}
 
 .action-arrow {
   color: var(--text-light);

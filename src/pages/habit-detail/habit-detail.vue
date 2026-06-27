@@ -48,56 +48,72 @@
           </swiper>
         </view>
 
-        <!-- Frequency -->
+        <!-- Goal Settings -->
         <view class="form-item flex-col">
-          <text class="label">打卡周期</text>
+          <text class="label">打卡目标</text>
+          
+          <view class="tabs flex-row" style="margin-bottom: 12px; opacity: 0.6;">
+            <view 
+              class="tab-item flex-row items-center justify-center"
+              :class="{ 'is-active': habit.goalType === 'frequency' }"
+              @click="showEditGoalToast"
+            >次数目标</view>
+            <view 
+              class="tab-item flex-row items-center justify-center"
+              :class="{ 'is-active': habit.goalType === 'amount' }"
+              @click="showEditGoalToast"
+            >总量目标</view>
+          </view>
+          
           <view class="tabs flex-row">
             <view 
               class="tab-item flex-row items-center justify-center"
-              :class="{ 'is-active': habit.cycleType === 'fixed' }"
-              @click="habit.cycleType = 'fixed'"
-            >固定天数</view>
+              :class="{ 'is-active': habit.frequencyType === 'weekly' }"
+              @click="habit.frequencyType = 'weekly'"
+            >按周</view>
             <view 
               class="tab-item flex-row items-center justify-center"
-              :class="{ 'is-active': habit.cycleType === 'weekly' }"
-              @click="habit.cycleType = 'weekly'"
-            >按周打卡</view>
-            <view 
-              class="tab-item flex-row items-center justify-center"
-              :class="{ 'is-active': habit.cycleType === 'monthly' }"
-              @click="habit.cycleType = 'monthly'"
-            >按月打卡</view>
+              :class="{ 'is-active': habit.frequencyType === 'monthly' }"
+              @click="habit.frequencyType = 'monthly'"
+            >按月</view>
           </view>
+
           <!-- Cycle Sub Options -->
           <view class="cycle-options flex-col">
-            <!-- Fixed Days -->
-            <view v-if="habit.cycleType === 'fixed'" class="flex-row fixed-days">
-              <view 
-                v-for="(day, index) in ['一','二','三','四','五','六','日']" 
-                :key="index"
-                class="day-circle flex-row items-center justify-center"
-                :class="{ 'is-active': habit.fixedDays && habit.fixedDays.includes(index + 1) }"
-                @click="toggleFixedDay(index + 1)"
-              >{{ day }}</view>
-            </view>
-            
-            <!-- Weekly Days -->
-            <view v-if="habit.cycleType === 'weekly'" class="flex-row items-center justify-between step-control">
-              <text>每周目标天数</text>
-              <view class="stepper flex-row items-center">
-                <view class="step-btn" @click="habit.weeklyTarget > 1 && habit.weeklyTarget--">-</view>
-                <text class="step-val">{{ habit.weeklyTarget || 3 }}</text>
-                <view class="step-btn" @click="habit.weeklyTarget < 7 && habit.weeklyTarget++">+</view>
+            <!-- Frequency Goal Inputs -->
+            <view v-if="habit.goalType === 'frequency'">
+              <view v-if="habit.frequencyType === 'weekly'" class="flex-row items-center justify-between step-control">
+                <text>每周目标次数</text>
+                <view class="stepper flex-row items-center">
+                  <view class="step-btn" @click="habit.weeklyTarget > 1 && habit.weeklyTarget--">-</view>
+                  <text class="step-val">{{ habit.weeklyTarget || 3 }}</text>
+                  <view class="step-btn" @click="habit.weeklyTarget < 7 && habit.weeklyTarget++">+</view>
+                </view>
+              </view>
+              
+              <view v-if="habit.frequencyType === 'monthly'" class="flex-row items-center justify-between step-control">
+                <text>每月目标次数</text>
+                <view class="stepper flex-row items-center">
+                  <view class="step-btn" @click="habit.monthlyTarget > 1 && habit.monthlyTarget--">-</view>
+                  <text class="step-val">{{ habit.monthlyTarget || 10 }}</text>
+                  <view class="step-btn" @click="habit.monthlyTarget < 31 && habit.monthlyTarget++">+</view>
+                </view>
               </view>
             </view>
-
-            <!-- Monthly Days -->
-            <view v-if="habit.cycleType === 'monthly'" class="flex-row items-center justify-between step-control">
-              <text>每月目标天数</text>
-              <view class="stepper flex-row items-center">
-                <view class="step-btn" @click="habit.monthlyTarget > 1 && habit.monthlyTarget--">-</view>
-                <text class="step-val">{{ habit.monthlyTarget || 10 }}</text>
-                <view class="step-btn" @click="habit.monthlyTarget < 31 && habit.monthlyTarget++">+</view>
+            
+            <!-- Amount Goal Inputs -->
+            <view v-if="habit.goalType === 'amount'" class="flex-col amount-settings">
+              <view class="flex-row items-center justify-between amount-row">
+                <text class="amount-label">{{ habit.frequencyType === 'weekly' ? '每周' : '每月' }}目标总量</text>
+                <view class="flex-row items-center amount-inputs">
+                  <input class="amount-input" type="digit" v-model.number="habit.amountValue" placeholder="0" />
+                  <picker class="unit-picker" mode="selector" :range="unitOptions" @change="onUnitChange">
+                    <view class="picker-display flex-row items-center">
+                      <text class="unit-text">{{ habit.amountUnit || 'km' }}</text>
+                      <text class="unit-arrow">▼</text>
+                    </view>
+                  </picker>
+                </view>
               </view>
             </view>
           </view>
@@ -165,16 +181,33 @@ const iconPages = computed(() => {
   return pages;
 });
 
+const unitOptions = ['km', '公里', '米', '分钟', '小时', '组', '次', '页'];
+const onUnitChange = (e) => {
+  habit.value.amountUnit = unitOptions[e.detail.value];
+};
+
 onLoad((options) => {
   if (options.id) {
     habitId.value = options.id;
     const existing = habitStore.getHabits.find(h => h.id === options.id);
     if (existing) {
       habit.value = JSON.parse(JSON.stringify(existing)); // deep clone
-      // Ensure defaults for older records
-      if (!habit.value.fixedDays) habit.value.fixedDays = [1,2,3,4,5];
+      
+      // Migrate old data formats to new formats
+      if (!habit.value.goalType) {
+        habit.value.goalType = 'frequency';
+        // if cycleType was fixed, convert to weekly
+        if (habit.value.cycleType === 'fixed') {
+          habit.value.frequencyType = 'weekly';
+        } else {
+          habit.value.frequencyType = habit.value.cycleType || 'weekly';
+        }
+      }
+      
+      // Ensure defaults
       if (!habit.value.weeklyTarget) habit.value.weeklyTarget = 3;
       if (!habit.value.monthlyTarget) habit.value.monthlyTarget = 10;
+      if (!habit.value.amountUnit) habit.value.amountUnit = 'km';
     } else {
       uni.showToast({ title: '习惯不存在', icon: 'none' });
       setTimeout(() => uni.navigateBack(), 1500);
@@ -182,18 +215,8 @@ onLoad((options) => {
   }
 });
 
-const toggleFixedDay = (day) => {
-  if (!habit.value.fixedDays) habit.value.fixedDays = [];
-  const idx = habit.value.fixedDays.indexOf(day);
-  if (idx > -1) {
-    if (habit.value.fixedDays.length > 1) {
-      habit.value.fixedDays.splice(idx, 1);
-    } else {
-      uni.showToast({ title: '至少选择一天', icon: 'none' });
-    }
-  } else {
-    habit.value.fixedDays.push(day);
-  }
+const showEditGoalToast = () => {
+  uni.showToast({ title: '不可编辑，可以重新创建习惯', icon: 'none' });
 };
 
 const save = () => {
@@ -206,6 +229,14 @@ const save = () => {
     uni.showToast({ title: '习惯名称不能包含特殊字符', icon: 'none' });
     return;
   }
+  
+  if (habit.value.goalType === 'amount') {
+    if (!habit.value.amountValue || habit.value.amountValue <= 0) {
+      uni.showToast({ title: '请输入正确的目标总量', icon: 'none' });
+      return;
+    }
+  }
+  
   habitStore.updateHabit(habit.value);
   uni.showToast({ title: '保存成功', icon: 'success' });
   setTimeout(() => uni.navigateBack(), 1000);
@@ -447,5 +478,55 @@ onShareTimeline(() => {
   border-radius: var(--radius-xl);
   font-size: 16px;
   font-weight: 600;
+}
+
+.amount-settings {
+  gap: 12px;
+}
+
+.amount-row {
+  height: 48px;
+}
+
+.amount-label {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.amount-inputs {
+  gap: 8px;
+}
+
+.amount-input {
+  width: 80px;
+  height: 36px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--primary);
+  border: 1px solid var(--border-light);
+}
+
+.picker-display {
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  
+  .unit-text {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-right: 4px;
+  }
+  
+  .unit-arrow {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
 }
 </style>

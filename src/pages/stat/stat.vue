@@ -49,7 +49,9 @@
               <view class="color-dot" :style="{ backgroundColor: item.color }"></view>
               <text class="habit-name">{{ item.name }}</text>
             </view>
-            <text class="habit-days">{{ item.days }}天</text>
+            <view class="flex-col items-end">
+              <text class="habit-days">{{ item.amountText }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -200,7 +202,7 @@
 
 <script setup>
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useHabitStore } from '@/store/habit';
 
 const habitStore = useHabitStore();
@@ -213,6 +215,14 @@ const checkins = computed(() => habitStore.getCheckins);
 const filterMode = ref('month'); // 'month', 'year', 'all'
 const selectedHabitIds = ref([]); // empty array means "All habits"
 const isHabitModalOpen = ref(false);
+
+watch(isHabitModalOpen, (val) => {
+  if (val) {
+    uni.hideTabBar();
+  } else {
+    uni.showTabBar();
+  }
+});
 
 const dDate = new Date();
 const currentYear = ref(dDate.getFullYear());
@@ -292,19 +302,39 @@ const uniqueCheckinDays = computed(() => {
 
 const breakdownData = computed(() => {
   const habitDaysMap = {};
+  const habitAmountMap = {};
+  
   timeFilteredCheckins.value.forEach(c => {
     if (!habitDaysMap[c.habitId]) {
       habitDaysMap[c.habitId] = new Set();
+      habitAmountMap[c.habitId] = 0;
     }
     habitDaysMap[c.habitId].add(c.date);
+    habitAmountMap[c.habitId] += Number(c.amount) || 0;
   });
   
-  return activeHabits.value.map(h => ({
-    id: h.id,
-    name: h.name,
-    color: h.color || '#3B82F6',
-    days: habitDaysMap[h.id] ? habitDaysMap[h.id].size : 0
-  })).filter(h => h.days > 0).sort((a,b) => b.days - a.days);
+  return activeHabits.value.map(h => {
+    const isAmount = h.goalType === 'amount';
+    const days = habitDaysMap[h.id] ? habitDaysMap[h.id].size : 0;
+    const amountVal = habitAmountMap[h.id] || 0;
+    
+    let amountText = '';
+    if (isAmount) {
+      amountText = `${amountVal}${h.amountUnit || ''}`;
+    } else {
+      amountText = `${days}次`;
+    }
+    
+    return {
+      id: h.id,
+      name: h.name,
+      color: h.color || '#3B82F6',
+      days: days,
+      isAmount: isAmount,
+      amountVal: amountVal,
+      amountText: amountText
+    };
+  }).filter(h => h.isAmount ? h.amountVal > 0 : h.days > 0).sort((a,b) => b.days - a.days);
 });
 
 const getTitle = computed(() => {
@@ -608,12 +638,12 @@ onShareTimeline(() => {
   
   .breakdown-list {
     flex: 1;
-    margin-left: 24px;
+    margin-left: 56px;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 24px;
-    gap: 12px 16px;
-    height: 96px;
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    gap: 16px;
+    height: 92px;
     overflow-y: auto;
     align-content: start;
     
@@ -633,6 +663,11 @@ onShareTimeline(() => {
         font-size: 14px;
         font-weight: 600;
         color: var(--text-main);
+      }
+      .habit-sub-days {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 2px;
       }
     }
   }

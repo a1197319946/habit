@@ -133,7 +133,7 @@ export const useHabitStore = defineStore('habit', {
       }).catch(e => console.error(e));
     },
     
-    async checkin(habitId, targetDate = null) {
+    async checkin(habitId, targetDate = null, amount = undefined) {
       const openid = await this.ensureOpenId();
       if (!openid) {
         uni.showToast({ title: '系统初始化中或未登录，请稍后再试', icon: 'none' });
@@ -141,23 +141,27 @@ export const useHabitStore = defineStore('habit', {
       }
       const today = new Date().toISOString().split('T')[0];
       const dateStr = targetDate || today;
-      const existing = this.checkins.find(c => c.habitId === habitId && c.date === dateStr);
+      const existingIdx = this.checkins.findIndex(c => c.habitId === habitId && c.date === dateStr);
       
-      if (!existing) {
+      if (existingIdx === -1) {
         // Optimistic update
         const tempId = Date.now().toString();
-        this.checkins = [...this.checkins, {
+        const checkinData = {
           id: tempId,
           habitId,
           date: dateStr,
           timestamp: Date.now()
-        }];
+        };
+        if (amount !== undefined) {
+          checkinData.amount = amount;
+        }
+        this.checkins = [...this.checkins, checkinData];
         this.saveToStorage();
         
         try {
           const { result } = await cloud.callFunction({
             name: 'habit-api',
-            data: { action: 'checkin', openid, data: { habitId, date: dateStr } }
+            data: { action: 'checkin', openid, data: { habitId, date: dateStr, amount } }
           });
           if (result.code === 0) {
             // Update tempId with real id
@@ -170,6 +174,16 @@ export const useHabitStore = defineStore('habit', {
         } catch (e) {
           console.error(e);
         }
+      } else if (amount !== undefined) {
+        // Update existing checkin
+        this.checkins[existingIdx].amount = amount;
+        this.checkins[existingIdx].timestamp = Date.now();
+        this.saveToStorage();
+        
+        cloud.callFunction({
+          name: 'habit-api',
+          data: { action: 'checkin', openid, data: { habitId, date: dateStr, amount } }
+        }).catch(e => console.error(e));
       }
     },
     

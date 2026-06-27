@@ -1,12 +1,12 @@
 <template>
-  <view class="popup-mask flex-col justify-end" @click="close">
-    <view class="popup-content flex-col" @click.stop>
-      <view class="header flex-row items-center justify-between">
+  <uni-popup ref="popupRef" type="bottom" :safe-area="false">
+    <view class="popup-content flex-col">
+      <view class="popup-header flex-row items-center justify-between">
         <view class="date-info flex-col">
-          <text class="title">记录心情</text>
+          <text class="popup-title">记录心情</text>
           <text class="subtitle">{{ currentDate }} · {{ habitName }}</text>
         </view>
-        <view class="close-icon" @click="close">✕</view>
+        <uni-icons type="closeempty" size="20" color="#9CA3AF" @click="close"></uni-icons>
       </view>
 
       <view class="form-body flex-col">
@@ -63,7 +63,7 @@
         </view>
       </view>
     </view>
-  </view>
+  </uni-popup>
 </template>
 
 <script setup>
@@ -75,6 +75,18 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'submit']);
+const popupRef = ref(null);
+
+const open = () => {
+  popupRef.value?.open();
+};
+
+
+const close = () => {
+  popupRef.value?.close();
+};
+
+defineExpose({ open, close });
 
 const currentDate = computed(() => {
   const d = new Date();
@@ -94,10 +106,6 @@ const formData = reactive({
   text: '',
   imageUrl: ''
 });
-
-const close = () => {
-  emit('close');
-};
 
 const chooseImage = () => {
   uni.chooseMedia({
@@ -140,49 +148,30 @@ const submit = () => {
     text: formData.text,
     imageUrl: formData.imageUrl
   });
+  close();
 };
 </script>
 
 <style lang="scss" scoped>
-.popup-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: var(--window-bottom, 0);
-  background: var(--uni-bg-color-mask, rgba(0, 0, 0, 0.4));
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  animation: fadeIn 0.2s ease-out;
-}
-
 .popup-content {
   width: 100%;
   box-sizing: border-box;
-  background: var(--surface);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: 16px 20px 24px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: #FFFFFF;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px;
 }
 
-.header {
-  margin-bottom: 16px;
-  .title {
+.popup-header {
+  margin-bottom: 24px;
+  .popup-title {
     font-size: 18px;
     font-weight: 700;
+    color: var(--text-main);
   }
   .subtitle {
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 4px;
-  }
-  .close-icon {
-    font-size: 20px;
-    color: var(--text-light);
-    padding: 4px;
   }
 }
 
@@ -311,13 +300,4 @@ const submit = () => {
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
 </style>

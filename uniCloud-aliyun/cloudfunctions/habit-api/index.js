@@ -63,18 +63,28 @@ exports.main = async (event, context) => {
     }
     
     case 'checkin': {
-      const { habitId, date } = data;
+      const { habitId, date, amount } = data;
       // 检查是否已打卡
       const existing = await checkinsCol.where({ habitId, date, openid }).get();
       if (existing.data.length > 0) {
+        if (amount !== undefined) {
+          await checkinsCol.where({ habitId, date, openid }).update({ amount, timestamp: Date.now() });
+          return { code: 0, id: existing.data[0]._id };
+        }
         return { code: -1, msg: '今日已打卡' };
       }
-      const res = await checkinsCol.add({
+      
+      const insertData = {
         habitId,
         date,
         openid,
         timestamp: Date.now()
-      });
+      };
+      if (amount !== undefined) {
+        insertData.amount = amount;
+      }
+      
+      const res = await checkinsCol.add(insertData);
       return { code: 0, id: res.id };
     }
     
