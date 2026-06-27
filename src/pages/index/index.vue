@@ -1,5 +1,19 @@
 <template>
   <view class="home-container">
+    <!-- Custom Navigation Bar -->
+    <view class="custom-navbar" :style="{ paddingTop: statusBarHeight + 'px' }">
+      <view class="navbar-content flex-row items-center">
+        <view class="brand-logo flex-row items-center">
+          <text class="logo-text-black">Tick</text>
+          <view class="logo-icon">
+            <uni-icons type="checkmarkempty" size="12" color="#fff" />
+          </view>
+          <text class="logo-text-purple">ay</text>
+        </view>
+        <text class="brand-subtitle">小习惯打卡</text>
+      </view>
+    </view>
+
     <!-- Header Section -->
     <view class="header-section flex-row items-center justify-between">
       <view class="header-text flex-col">
@@ -137,6 +151,7 @@ import MoodRecorder from '@/components/mood-recorder/mood-recorder.vue';
 const habitStore = useHabitStore();
 const userStore = useUserStore();
 
+const statusBarHeight = ref(44);
 const showSuccess = ref(false);
 const showMoodRecorder = ref(false);
 const showConfetti = ref(false);
@@ -176,6 +191,8 @@ const pageTransition = ref('');
 const pageTransform = ref('translateX(-33.333%)');
 
 onShow(() => {
+  const sysInfo = uni.getSystemInfoSync();
+  statusBarHeight.value = sysInfo.statusBarHeight || 44;
   generateWeekDays();
 });
 
@@ -412,6 +429,54 @@ const handleMoodSubmit = (moodData) => {
   padding: 4px 16px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.custom-navbar {
+  width: 100%;
+  background: transparent;
+  padding-bottom: 12px;
+}
+
+.navbar-content {
+  height: 44px;
+}
+
+.brand-logo {
+  margin-right: 12px;
+}
+
+.logo-text-black {
+  font-size: 20px;
+  font-weight: 900;
+  color: #111827;
+  font-style: italic;
+  letter-spacing: -0.5px;
+}
+
+.logo-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #8B5CF6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -2px;
+  z-index: 1;
+}
+
+.logo-text-purple {
+  font-size: 20px;
+  font-weight: 900;
+  color: #8B5CF6;
+  font-style: italic;
+  letter-spacing: -0.5px;
+}
+
+.brand-subtitle {
+  font-size: 13px;
+  color: #6B7280;
+  font-weight: 500;
 }
 
 .header-section {

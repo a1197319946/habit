@@ -22,7 +22,8 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "小习惯打卡"
+				"navigationBarTitleText": "小习惯打卡",
+				"navigationStyle": "custom"
 			}
 		},
 		{
