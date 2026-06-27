@@ -43,7 +43,7 @@
                 <view v-else class="status-icon unchecked-circle"></view>
               </view>
               
-              <view v-if="day.isToday && !day.isSelected" class="active-indicator"></view>
+              <view v-if="day.isToday" class="active-indicator"></view>
             </view>
           </view>
         </view>
@@ -127,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
 import { useHabitStore } from '@/store/habit';
@@ -178,6 +178,10 @@ const pageTransform = ref('translateX(-33.333%)');
 onShow(() => {
   generateWeekDays();
 });
+
+watch(() => habitStore.checkins, () => {
+  generateWeekDays();
+}, { deep: true });
 
 const generateOneWeek = (offset, returnMidMonth = false) => {
   const today = new Date();
@@ -360,14 +364,12 @@ const handleCheckin = (habitId) => {
       success: (res) => {
         if (res.confirm) {
           habitStore.undoCheckin(habitId, selectedDate.value);
-          generateWeekDays();
         }
       }
     });
   } else {
     habitStore.checkin(habitId, selectedDate.value);
     currentHabit.value = habits.value.find(h => h.id === habitId);
-    generateWeekDays();
     
     triggerConfetti();
     
