@@ -39,6 +39,7 @@
 <script setup>
 import { computed, ref, getCurrentInstance } from 'vue';
 import { useHabitStore } from '@/store/habit';
+import { useUserStore } from '@/store/user';
 import { drawRoundRect } from '@/utils/canvasHelper';
 
 const props = defineProps({
@@ -192,113 +193,100 @@ const statsData = computed(() => {
   return { totalCount, monthCount, monthDays, maxStreak, currentStreak, weeklyTrend, weekCheckins };
 });
 
-// ======================== POSTER GENERATION ========================
-const generatePoster = () => {
+const generatePoster = async () => {
   try {
     uni.showLoading({ title: '生成中...' });
-    const ctx = uni.createCanvasContext('posterCanvas', instance.proxy);
-    const W = 375;
-    const H = 667;
-    ctx.scale(0.5, 0.5);
+    const userStore = useUserStore();
     
-    // 1. Immersive Gradient
-    const bgGrd = ctx.createLinearGradient(0, 0, 0, 1334);
-    bgGrd.addColorStop(0, '#E2CBFF'); 
-    bgGrd.addColorStop(0.45, '#F2E6FF'); 
-    bgGrd.addColorStop(1, '#FFFFFF'); 
-    ctx.setFillStyle(bgGrd);
-    ctx.fillRect(0, 0, 750, 1334);
-    
-    // 2. Rabbit Background at Bottom (Correct Aspect Ratio 750x257)
-    ctx.drawImage('/static/images/header_bg.png', 0, 1334 - 257, 750, 257);
-    
-    // 3. Top Custom Text Logo (Dynamic spacing to prevent overlap)
-    const topY = 120;
-    ctx.setTextAlign('left');
-    ctx.setFontSize(60);
-    const tickW = ctx.measureText('Tick').width || 120;
-    const ayW = ctx.measureText('ay').width || 60;
-    const dotSpacing = 50; 
-    const totalLogoW = tickW + ayW + dotSpacing;
-    const startX = (750 - totalLogoW) / 2;
-    
-    // Tick
-    ctx.setFillStyle('#111827');
-    ctx.fillText('Tick', startX, topY);
-    
-    // Purple dot icon
-    const dotX = startX + tickW + (dotSpacing / 2);
-    ctx.beginPath();
-    ctx.arc(dotX, topY - 18, 18, 0, 2*Math.PI);
-    ctx.setFillStyle('#8B5CF6');
-    ctx.fill();
-    // White checkmark
-    ctx.beginPath();
-    ctx.moveTo(dotX - 8, topY - 18);
-    ctx.lineTo(dotX - 2, topY - 12);
-    ctx.lineTo(dotX + 8, topY - 26);
-    ctx.setStrokeStyle('#FFFFFF');
-    ctx.setLineWidth(4);
-    ctx.stroke();
-    
-    // ay
-    ctx.setFillStyle('#8B5CF6');
-    ctx.fillText('ay', startX + tickW + dotSpacing, topY);
-    
-    // Tagline
-    ctx.setFontSize(26);
-    ctx.setFillStyle('#6B7280');
-    ctx.setTextAlign('center');
-    ctx.fillText('小习惯，大成就', 375, topY + 60);
-    
-    // 4. Middle Clean White Card
-    const cY = 380;
-    ctx.setShadow(0, 20, 50, 'rgba(139,92,246,0.15)');
-    ctx.setFillStyle('#FFFFFF');
-    drawRoundRect(ctx, 40, cY, 670, 640, 40);
-    ctx.fill();
-    ctx.setShadow(0, 0, 0, 'rgba(0,0,0,0)');
-    
-    // 4.5 Habit Icon Image
-    if (props.habit?.icon) {
-      ctx.drawImage(`/static/icons/habbit/${props.habit.icon}.png`, 325, cY + 50, 100, 100);
+    let avatarPath = '';
+    if (userStore.userInfo?.avatarUrl) {
+      try {
+        const res = await new Promise((resolve, reject) => {
+          uni.getImageInfo({
+            src: userStore.userInfo.avatarUrl,
+            success: resolve,
+            fail: reject
+          });
+        });
+        avatarPath = res.path;
+      } catch(e) { console.error(e); }
     }
+
+    const ctx = uni.createCanvasContext('posterCanvas', instance.proxy);
+    // Draw on a 941x1672 coordinate system, scaling down to CSS pixels
+    ctx.scale(0.5, 0.5); 
     
-    // 5. Motivational Quote
-    ctx.setFontSize(40);
-    ctx.setFillStyle('#111827');
-    ctx.setTextAlign('center');
-    ctx.fillText('每一次小小的坚持，', 375, cY + 220);
-    ctx.fillText('都是在塑造更好的自己。', 375, cY + 290);
+    // 1. Static Background Image
+    ctx.drawImage('/static/bg.png', 0, 0, 941, 1672);
     
-    // 6. "今天是坚持习惯的第X天"
-    const hName = props.habit?.name || '未知习惯';
-    ctx.setFontSize(28);
-    ctx.setFillStyle('#6B7280');
-    ctx.fillText(`今天是坚持「${hName}」的第`, 375, cY + 390);
-    
-    ctx.setFontSize(110);
-    ctx.setFillStyle('#8B5CF6');
-    ctx.fillText(statsData.value.totalCount, 375, cY + 520);
-    
-    ctx.setFontSize(26);
-    ctx.setFillStyle('#9CA3AF');
-    ctx.fillText('天', 375, cY + 590);
+    // Use top baseline for 1:1 design tool coordinate matching
+    ctx.setTextBaseline('top');
     ctx.setTextAlign('left');
+
+    // 1.5 Calendar Day (703, 207), size 72
+    const dateObj = new Date(props.date || new Date().toISOString().split('T')[0]);
+    const dayNumStr = dateObj.getDate().toString();
+    ctx.setFontSize(72);
+    ctx.setFillStyle('#7E22CE');
+    ctx.fillText(dayNumStr, 703, 207);
+    ctx.fillText(dayNumStr, 704, 207); // bold
+
+    // 2. Quote (107, 439), size 48
+    ctx.setFontSize(48);
+    ctx.setFillStyle('#111827');
+    ctx.fillText('你现在的努力，', 107, 439);
+    ctx.fillText('你现在的努力，', 108, 439); // fake bold
+    ctx.fillText('是为了遇见更好的自己。', 107, 509);
+    ctx.fillText('是为了遇见更好的自己。', 108, 509);
+
+    // Habit Name & Icon
+    const hName = props.habit?.name || '未知习惯';
+    ctx.setFontSize(80); // smaller
+    ctx.setFillStyle('#7E22CE');
+    ctx.fillText(hName, 107, 810); // down further
+    ctx.fillText(hName, 108, 810);
     
-    // 7. QR Code in bottom right corner of the card
-    ctx.drawImage('/static/scancode.jpg', 540, cY + 440, 140, 140);
-    ctx.setFontSize(20);
-    ctx.setFillStyle('#9CA3AF');
-    ctx.fillText('扫码一起打卡', 545, cY + 610);
+    if (props.habit?.icon) {
+      const w = ctx.measureText(hName).width;
+      ctx.drawImage(`/static/icons/habbit/${props.habit.icon}.png`, 107 + w + 30, 800, 90, 90);
+    }
+
+    // (Chick, Avatar, Nickname removed per user request)
+
+    ctx.setTextAlign('left'); // Reset for the rest
+
+    // 7. Stats
+    // Month days (moved right from 203 to 223)
+    const mDays = (statsData.value.monthDays || 1).toString();
+    ctx.setFontSize(88); // larger
+    ctx.setFillStyle('#7E22CE');
+    ctx.fillText(mDays, 223, 1177);
+    ctx.fillText(mDays, 224, 1177); // bold layer 1
+    ctx.fillText(mDays, 225, 1177); // bold layer 2
+    const w1 = ctx.measureText(mDays).width;
+    ctx.setFontSize(40);
+    ctx.fillText('天', 223 + w1 + 10, 1177 + 40); // Align '天' vertically with the larger digits
+    
+    // Total days (moved left from 649 to 610)
+    const tDays = (statsData.value.totalCount || 1).toString();
+    ctx.setFontSize(88); // larger
+    ctx.fillText(tDays, 610, 1177);
+    ctx.fillText(tDays, 611, 1177); // bold layer 1
+    ctx.fillText(tDays, 612, 1177); // bold layer 2
+    const w2 = ctx.measureText(tDays).width;
+    ctx.setFontSize(40);
+    ctx.fillText('天', 610 + w2 + 10, 1177 + 40);
+
+    // 8. QR Code (118, 1399) size (144, 144)
+    ctx.drawImage('/static/scancode.jpg', 118, 1399, 144, 144);
     
     ctx.draw(false, () => {
       setTimeout(() => {
         uni.canvasToTempFilePath({
           canvasId: 'posterCanvas',
           fileType: 'png',
-          destWidth: 750,
-          destHeight: 1334,
+          destWidth: 941,
+          destHeight: 1672,
           success: (res) => {
             uni.hideLoading();
             uni.previewImage({ urls: [res.tempFilePath], current: res.tempFilePath });
@@ -425,8 +413,8 @@ defineExpose({ open, close });
 }
 
 .poster-canvas {
-  width: 375px;
-  height: 667px;
+  width: 470.5px;
+  height: 836px;
   position: fixed;
   left: -9999px;
   top: -9999px;
