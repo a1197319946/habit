@@ -107,7 +107,7 @@
               <view class="flex-row items-center justify-between amount-row">
                 <text class="amount-label">{{ formData.frequencyType === 'weekly' ? '每周' : '每月' }}目标总量</text>
                 <view class="flex-row items-center amount-inputs">
-                  <input class="amount-input" type="digit" v-model.number="formData.amountValue" placeholder="0" />
+                  <input class="amount-input" type="digit" v-model="formData.amountValue" @input="onAmountInput" placeholder="0" />
                   <picker class="unit-picker" mode="selector" :range="unitOptions" @change="onUnitChange">
                     <view class="picker-display flex-row items-center">
                       <text class="unit-text">{{ formData.amountUnit }}</text>
@@ -135,7 +135,7 @@
 
 <script setup>
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { reactive, computed, ref } from 'vue';
+import { reactive, computed, ref, nextTick } from 'vue';
 import { useHabitStore } from '@/store/habit';
 import { localIcons } from '@/utils/icons';
 
@@ -203,6 +203,25 @@ const isSubmitting = ref(false);
 // unused now
 const toggleFixedDay = () => {};
 
+const onAmountInput = (e) => {
+  let val = e.detail.value.toString();
+  val = val.replace(/[^\d.]/g, ''); 
+  const parts = val.split('.');
+  if (parts.length > 2) {
+    val = parts[0] + '.' + parts.slice(1).join('');
+  }
+  if (val.includes('.')) {
+    const p = val.split('.');
+    if (p[1].length > 1) {
+      val = p[0] + '.' + p[1].substring(0, 1);
+    }
+  }
+  nextTick(() => {
+    formData.amountValue = val;
+  });
+  return val;
+};
+
 const submit = async () => {
   if (isSubmitting.value) return;
 
@@ -226,10 +245,12 @@ const submit = async () => {
   }
   
   if (formData.goalType === 'amount') {
-    if (!formData.amountValue || formData.amountValue <= 0) {
+    const amountVal = parseFloat(formData.amountValue);
+    if (isNaN(amountVal) || amountVal <= 0) {
       uni.showToast({ title: '请输入正确的目标总量', icon: 'none' });
       return;
     }
+    formData.amountValue = amountVal;
   }
   
   isSubmitting.value = true;

@@ -24,7 +24,8 @@
           <input 
             class="amount-input" 
             type="digit" 
-            v-model.number="amount" 
+            v-model="amount" 
+            @input="onAmountInput"
             placeholder="0" 
             :focus="isFocus"
           />
@@ -80,12 +81,32 @@ const close = () => {
 };
 
 
+const onAmountInput = (e) => {
+  let val = e.detail.value.toString();
+  val = val.replace(/[^\d.]/g, ''); 
+  const parts = val.split('.');
+  if (parts.length > 2) {
+    val = parts[0] + '.' + parts.slice(1).join('');
+  }
+  if (val.includes('.')) {
+    const p = val.split('.');
+    if (p[1].length > 1) {
+      val = p[0] + '.' + p[1].substring(0, 1);
+    }
+  }
+  nextTick(() => {
+    amount.value = val;
+  });
+  return val;
+};
+
 const submit = () => {
-  if (!amount.value || amount.value <= 0) {
+  const finalAmount = parseFloat(amount.value);
+  if (isNaN(finalAmount) || finalAmount <= 0) {
     uni.showToast({ title: '请输入正确的数值', icon: 'none' });
     return;
   }
-  emit('submit', amount.value);
+  emit('submit', finalAmount);
   close();
 };
 

@@ -362,7 +362,7 @@ const getHabitProgressText = (habitId) => {
   if (habit.goalType === 'amount') {
     const acc = periodCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
     const target = habit.amountValue || 0;
-    return `${freqLabel}: ${acc}/${target} ${habit.amountUnit || ''}`;
+    return `${freqLabel}: ${Number(acc.toFixed(1))}/${target} ${habit.amountUnit || ''}`;
   } else {
     const acc = periodCheckins.length;
     const target = habit.frequencyType === 'weekly' ? (habit.weeklyTarget || 3) : (habit.monthlyTarget || 10);
@@ -447,7 +447,7 @@ const handleCheckin = (habitId) => {
     const endStr = [lastDay.getFullYear(), String(lastDay.getMonth()+1).padStart(2,'0'), String(lastDay.getDate()).padStart(2,'0')].join('-');
     periodCheckins = checkins.filter(c => c.date >= startStr && c.date <= endStr);
   }
-  currentHabitAccumulated.value = periodCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  currentHabitAccumulated.value = Number(periodCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0).toFixed(1));
 
   const existingCheckin = habitStore.getCheckinsByDate(selectedDate.value).find(c => c.habitId === habitId);
 

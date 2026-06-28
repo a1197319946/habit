@@ -106,7 +106,7 @@
               <view class="flex-row items-center justify-between amount-row">
                 <text class="amount-label">{{ habit.frequencyType === 'weekly' ? '每周' : '每月' }}目标总量</text>
                 <view class="flex-row items-center amount-inputs">
-                  <input class="amount-input" type="digit" v-model.number="habit.amountValue" placeholder="0" />
+                  <input class="amount-input" type="digit" v-model="habit.amountValue" @input="onAmountInput" placeholder="0" />
                   <picker class="unit-picker" mode="selector" :range="unitOptions" @change="onUnitChange">
                     <view class="picker-display flex-row items-center">
                       <text class="unit-text">{{ habit.amountUnit || 'km' }}</text>
@@ -133,7 +133,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useHabitStore } from '../../store/habit';
 import { onLoad, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { localIcons } from '../../utils/icons';
@@ -219,6 +219,25 @@ const showEditGoalToast = () => {
   uni.showToast({ title: '设定好的目标类型不可修改哦，如需修改请重新创建习惯', icon: 'none' });
 };
 
+const onAmountInput = (e) => {
+  let val = e.detail.value.toString();
+  val = val.replace(/[^\d.]/g, ''); 
+  const parts = val.split('.');
+  if (parts.length > 2) {
+    val = parts[0] + '.' + parts.slice(1).join('');
+  }
+  if (val.includes('.')) {
+    const p = val.split('.');
+    if (p[1].length > 1) {
+      val = p[0] + '.' + p[1].substring(0, 1);
+    }
+  }
+  nextTick(() => {
+    habit.value.amountValue = val;
+  });
+  return val;
+};
+
 const save = () => {
   if (!habit.value.name.trim()) {
     uni.showToast({ title: '请输入习惯名称', icon: 'none' });
@@ -231,10 +250,12 @@ const save = () => {
   }
   
   if (habit.value.goalType === 'amount') {
-    if (!habit.value.amountValue || habit.value.amountValue <= 0) {
+    const amountVal = parseFloat(habit.value.amountValue);
+    if (isNaN(amountVal) || amountVal <= 0) {
       uni.showToast({ title: '请输入正确的目标总量', icon: 'none' });
       return;
     }
+    habit.value.amountValue = amountVal;
   }
   
   habitStore.updateHabit(habit.value);

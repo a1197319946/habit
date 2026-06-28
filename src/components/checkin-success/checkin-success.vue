@@ -195,7 +195,7 @@ const statsData = computed(() => {
 // ======================== POSTER GENERATION ========================
 const generatePoster = () => {
   try {
-    uni.showLoading({ title: '魔法生成中...' });
+    uni.showLoading({ title: '生成中...' });
     const ctx = uni.createCanvasContext('posterCanvas', instance.proxy);
     const W = 375;
     const H = 667;

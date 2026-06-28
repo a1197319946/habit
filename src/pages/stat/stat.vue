@@ -325,7 +325,7 @@ const breakdownData = computed(() => {
     
     let amountText = '';
     if (isAmount) {
-      amountText = `${amountVal}${h.amountUnit || ''}`;
+      amountText = `${Number(amountVal.toFixed(1))}${h.amountUnit || ''}`;
     } else {
       amountText = `${days}次`;
     }
@@ -339,7 +339,7 @@ const breakdownData = computed(() => {
       amountVal: amountVal,
       amountText: amountText
     };
-  }).filter(h => h.isAmount ? h.amountVal > 0 : h.days > 0).sort((a,b) => b.days - a.days);
+  }).filter(h => h.isAmount ? h.amountVal > 0 : h.days > 0);
 });
 
 const getTitle = computed(() => {
@@ -359,16 +359,8 @@ const isToday = (day) => {
 
 const getHabitsOnDay = (day) => {
   const dateStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const habitsOnDay = [];
-  timeFilteredCheckins.value.forEach(c => {
-    if (c.date === dateStr) {
-      const h = activeHabits.value.find(hab => hab.id === c.habitId);
-      if (h && !habitsOnDay.find(x => x.id === h.id)) {
-        habitsOnDay.push(h);
-      }
-    }
-  });
-  return habitsOnDay;
+  const presentHabitIds = new Set(timeFilteredCheckins.value.filter(c => c.date === dateStr).map(c => c.habitId));
+  return activeHabits.value.filter(h => presentHabitIds.has(h.id));
 };
 
 // Year View (Bar Chart) Logic
