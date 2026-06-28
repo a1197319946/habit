@@ -7,11 +7,7 @@
     <view class="custom-navbar" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="navbar-content flex-row items-center">
         <view class="brand-logo flex-row items-center">
-          <text class="logo-text-black">Tick</text>
-          <view class="logo-icon">
-            <uni-icons type="checkmarkempty" size="12" color="#fff" />
-          </view>
-          <text class="logo-text-purple">ay</text>
+          <image src="https://mp-262de33c-8e30-4555-93c8-259e7396a210.cdn.bspapp.com/img/logo.png" class="top-logo-img" mode="heightFix" />
         </view>
         <text class="brand-subtitle">小习惯打卡</text>
       </view>
@@ -565,6 +561,10 @@ const handleMoodSubmit = (moodData) => {
   color: #8B5CF6;
   font-style: italic;
   letter-spacing: -0.5px;
+}
+
+.top-logo-img {
+  height: 28px;
 }
 
 .brand-subtitle {

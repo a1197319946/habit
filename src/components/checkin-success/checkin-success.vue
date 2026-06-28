@@ -211,13 +211,30 @@ const generatePoster = async () => {
         avatarPath = res.path;
       } catch(e) { console.error(e); }
     }
+    
+    // Download helper for remote canvas images
+    const downloadImage = (url) => new Promise((resolve, reject) => {
+      uni.getImageInfo({
+        src: url,
+        success: (res) => resolve(res.path),
+        fail: (err) => resolve('') // fallback if download fails
+      });
+    });
+
+    // Fetch required remote images
+    const [bgPath, scancodePath] = await Promise.all([
+      downloadImage('https://mp-262de33c-8e30-4555-93c8-259e7396a210.cdn.bspapp.com/img/bg.png'),
+      downloadImage('https://mp-262de33c-8e30-4555-93c8-259e7396a210.cdn.bspapp.com/img/scancode.jpg')
+    ]);
 
     const ctx = uni.createCanvasContext('posterCanvas', instance.proxy);
     // Draw on a 941x1672 coordinate system, scaling down to CSS pixels
     ctx.scale(0.5, 0.5); 
     
     // 1. Static Background Image
-    ctx.drawImage('/static/bg.png', 0, 0, 941, 1672);
+    if (bgPath) {
+      ctx.drawImage(bgPath, 0, 0, 941, 1672);
+    }
     
     // Use top baseline for 1:1 design tool coordinate matching
     ctx.setTextBaseline('top');
@@ -278,7 +295,9 @@ const generatePoster = async () => {
     ctx.fillText('天', 610 + w2 + 10, 1177 + 40);
 
     // 8. QR Code (118, 1399) size (144, 144)
-    ctx.drawImage('/static/scancode.jpg', 118, 1399, 144, 144);
+    if (scancodePath) {
+      ctx.drawImage(scancodePath, 118, 1399, 144, 144);
+    }
     
     ctx.draw(false, () => {
       setTimeout(() => {
