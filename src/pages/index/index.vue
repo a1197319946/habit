@@ -176,6 +176,7 @@ onShareAppMessage(() => {
   return {
     title: '小习惯 - 坚持每天微小的改变',
     path: '/pages/index/index',
+    imageUrl: '/static/images/header_bg.png'
   };
 });
 

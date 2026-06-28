@@ -25,6 +25,14 @@
         <view class="item-arrow">›</view>
       </view>
       
+      <button class="list-item flex-row items-center justify-between menu-btn" open-type="share">
+        <view class="item-left flex-row items-center">
+          <uni-icons type="paperplane" size="24" color="var(--primary)" class="item-icon-ui"></uni-icons>
+          <text class="item-text">分享好友</text>
+        </view>
+        <view class="item-arrow">›</view>
+      </button>
+      
       <button class="list-item flex-row items-center justify-between menu-btn" open-type="feedback">
         <view class="item-left flex-row items-center">
           <uni-icons type="chat" size="24" color="var(--primary)" class="item-icon-ui"></uni-icons>
@@ -182,7 +190,8 @@ const showAbout = () => {
 onShareAppMessage(() => {
   return {
     title: '小习惯 - 坚持每天微小的改变',
-    path: '/pages/index/index'
+    path: '/pages/index/index',
+    imageUrl: '/static/images/header_bg.png'
   };
 });
 

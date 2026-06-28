@@ -29,14 +29,17 @@
       
       <view class="actions-group flex-col">
         <view class="btn primary-btn" @click="recordMood">记心情</view>
+        <view class="btn secondary-btn" @click="generatePoster">生成分享海报</view>
       </view>
     </view>
   </uni-popup>
+  <canvas canvas-id="posterCanvas" class="poster-canvas"></canvas>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, getCurrentInstance } from 'vue';
 import { useHabitStore } from '@/store/habit';
+import { drawRoundRect } from '@/utils/canvasHelper';
 
 const props = defineProps({
   habit: Object,
@@ -46,6 +49,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'record']);
 const habitStore = useHabitStore();
 const popupRef = ref(null);
+const instance = getCurrentInstance();
 
 const open = () => {
   popupRef.value?.open();
@@ -59,8 +63,7 @@ const recordMood = () => {
   emit('record');
 };
 
-defineExpose({ open, close });
-
+// ======================== STATS LOGIC ========================
 const periodCheckins = computed(() => {
   if (!props.habit) return [];
   const checkins = habitStore.getCheckins.filter(c => c.habitId === props.habit.id);
@@ -113,6 +116,209 @@ const progressData = computed(() => {
 
   return { label, targetLabel, target, currentTotal, todayAmount, unit };
 });
+
+const statsData = computed(() => {
+  if (!props.habit) return null;
+  const checkins = habitStore.getCheckins.filter(c => c.habitId === props.habit.id).sort((a,b) => a.date.localeCompare(b.date));
+  
+  const totalCount = checkins.length;
+  
+  const dateStr = props.date || new Date().toISOString().split('T')[0];
+  const [ty, tm, td] = dateStr.split('-');
+  const todayDate = new Date(ty, tm - 1, td);
+  const currentMonthStr = todayDate.getFullYear() + '-' + String(todayDate.getMonth() + 1).padStart(2, '0');
+  const thisMonthCheckins = checkins.filter(c => c.date.startsWith(currentMonthStr));
+  const monthCount = thisMonthCheckins.length;
+  const monthDays = new Set(thisMonthCheckins.map(c => c.date)).size;
+  
+  let maxStreak = 0;
+  let currentStreak = 0;
+  let tempStreak = 0;
+  let lastDate = null;
+  const uniqueDates = Array.from(new Set(checkins.map(c => c.date))).sort();
+  
+  for (let i = 0; i < uniqueDates.length; i++) {
+    if (!lastDate) {
+      tempStreak = 1;
+    } else {
+      const d1 = new Date(lastDate);
+      const d2 = new Date(uniqueDates[i]);
+      const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+      if (diff === 1) {
+        tempStreak += 1;
+      } else if (diff > 1) {
+        tempStreak = 1;
+      }
+    }
+    if (tempStreak > maxStreak) maxStreak = tempStreak;
+    lastDate = uniqueDates[i];
+  }
+  
+  const todayStr = dateStr;
+  const yesterdayDate = new Date(todayDate);
+  yesterdayDate.setDate(todayDate.getDate() - 1);
+  const yesterdayStr = [yesterdayDate.getFullYear(), String(yesterdayDate.getMonth() + 1).padStart(2, '0'), String(yesterdayDate.getDate()).padStart(2, '0')].join('-');
+  
+  if (!uniqueDates.includes(todayStr) && !uniqueDates.includes(yesterdayStr)) {
+    currentStreak = 0;
+  } else {
+    let backDate = new Date(uniqueDates.includes(todayStr) ? todayStr : yesterdayStr);
+    while (true) {
+      const bStr = [backDate.getFullYear(), String(backDate.getMonth() + 1).padStart(2, '0'), String(backDate.getDate()).padStart(2, '0')].join('-');
+      if (uniqueDates.includes(bStr)) {
+        currentStreak++;
+        backDate.setDate(backDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+  }
+  
+  const dayOfWeek = todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1;
+  const mondayDate = new Date(todayDate);
+  mondayDate.setDate(todayDate.getDate() - dayOfWeek);
+  
+  const weeklyTrend = [];
+  let weekCheckins = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate);
+    d.setDate(mondayDate.getDate() + i);
+    const dStr = [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+    const hasCheckin = uniqueDates.includes(dStr);
+    if (hasCheckin) weekCheckins++;
+    weeklyTrend.push(hasCheckin);
+  }
+  
+  return { totalCount, monthCount, monthDays, maxStreak, currentStreak, weeklyTrend, weekCheckins };
+});
+
+// ======================== POSTER GENERATION ========================
+const generatePoster = () => {
+  try {
+    uni.showLoading({ title: '魔法生成中...' });
+    const ctx = uni.createCanvasContext('posterCanvas', instance.proxy);
+    const W = 375;
+    const H = 667;
+    ctx.scale(0.5, 0.5);
+    
+    // 1. Immersive Gradient
+    const bgGrd = ctx.createLinearGradient(0, 0, 0, 1334);
+    bgGrd.addColorStop(0, '#E2CBFF'); 
+    bgGrd.addColorStop(0.45, '#F2E6FF'); 
+    bgGrd.addColorStop(1, '#FFFFFF'); 
+    ctx.setFillStyle(bgGrd);
+    ctx.fillRect(0, 0, 750, 1334);
+    
+    // 2. Rabbit Background at Bottom (Correct Aspect Ratio 750x257)
+    ctx.drawImage('/static/images/header_bg.png', 0, 1334 - 257, 750, 257);
+    
+    // 3. Top Custom Text Logo (Dynamic spacing to prevent overlap)
+    const topY = 120;
+    ctx.setTextAlign('left');
+    ctx.setFontSize(60);
+    const tickW = ctx.measureText('Tick').width || 120;
+    const ayW = ctx.measureText('ay').width || 60;
+    const dotSpacing = 50; 
+    const totalLogoW = tickW + ayW + dotSpacing;
+    const startX = (750 - totalLogoW) / 2;
+    
+    // Tick
+    ctx.setFillStyle('#111827');
+    ctx.fillText('Tick', startX, topY);
+    
+    // Purple dot icon
+    const dotX = startX + tickW + (dotSpacing / 2);
+    ctx.beginPath();
+    ctx.arc(dotX, topY - 18, 18, 0, 2*Math.PI);
+    ctx.setFillStyle('#8B5CF6');
+    ctx.fill();
+    // White checkmark
+    ctx.beginPath();
+    ctx.moveTo(dotX - 8, topY - 18);
+    ctx.lineTo(dotX - 2, topY - 12);
+    ctx.lineTo(dotX + 8, topY - 26);
+    ctx.setStrokeStyle('#FFFFFF');
+    ctx.setLineWidth(4);
+    ctx.stroke();
+    
+    // ay
+    ctx.setFillStyle('#8B5CF6');
+    ctx.fillText('ay', startX + tickW + dotSpacing, topY);
+    
+    // Tagline
+    ctx.setFontSize(26);
+    ctx.setFillStyle('#6B7280');
+    ctx.setTextAlign('center');
+    ctx.fillText('小习惯，大成就', 375, topY + 60);
+    
+    // 4. Middle Clean White Card
+    const cY = 380;
+    ctx.setShadow(0, 20, 50, 'rgba(139,92,246,0.15)');
+    ctx.setFillStyle('#FFFFFF');
+    drawRoundRect(ctx, 40, cY, 670, 640, 40);
+    ctx.fill();
+    ctx.setShadow(0, 0, 0, 'rgba(0,0,0,0)');
+    
+    // 4.5 Habit Icon Image
+    if (props.habit?.icon) {
+      ctx.drawImage(`/static/icons/habbit/${props.habit.icon}.png`, 325, cY + 50, 100, 100);
+    }
+    
+    // 5. Motivational Quote
+    ctx.setFontSize(40);
+    ctx.setFillStyle('#111827');
+    ctx.setTextAlign('center');
+    ctx.fillText('每一次小小的坚持，', 375, cY + 220);
+    ctx.fillText('都是在塑造更好的自己。', 375, cY + 290);
+    
+    // 6. "今天是坚持习惯的第X天"
+    const hName = props.habit?.name || '未知习惯';
+    ctx.setFontSize(28);
+    ctx.setFillStyle('#6B7280');
+    ctx.fillText(`今天是坚持「${hName}」的第`, 375, cY + 390);
+    
+    ctx.setFontSize(110);
+    ctx.setFillStyle('#8B5CF6');
+    ctx.fillText(statsData.value.totalCount, 375, cY + 520);
+    
+    ctx.setFontSize(26);
+    ctx.setFillStyle('#9CA3AF');
+    ctx.fillText('天', 375, cY + 590);
+    ctx.setTextAlign('left');
+    
+    // 7. QR Code in bottom right corner of the card
+    ctx.drawImage('/static/scancode.jpg', 540, cY + 440, 140, 140);
+    ctx.setFontSize(20);
+    ctx.setFillStyle('#9CA3AF');
+    ctx.fillText('扫码一起打卡', 545, cY + 610);
+    
+    ctx.draw(false, () => {
+      setTimeout(() => {
+        uni.canvasToTempFilePath({
+          canvasId: 'posterCanvas',
+          fileType: 'png',
+          destWidth: 750,
+          destHeight: 1334,
+          success: (res) => {
+            uni.hideLoading();
+            uni.previewImage({ urls: [res.tempFilePath], current: res.tempFilePath });
+          },
+          fail: (err) => {
+            console.error('canvas to file failed', err);
+            uni.hideLoading();
+            uni.showToast({ title: '海报生成失败', icon: 'none' });
+          }
+        }, instance.proxy);
+      }, 500);
+    });
+  } catch (err) {
+    uni.hideLoading();
+    uni.showModal({ title: "Error", content: err.message || String(err) });
+    console.error(err);
+  }
+};
+
+defineExpose({ open, close });
 </script>
 
 <style lang="scss" scoped>
@@ -218,4 +424,11 @@ const progressData = computed(() => {
   border: 1px solid var(--border-light);
 }
 
+.poster-canvas {
+  width: 375px;
+  height: 667px;
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+}
 </style>
