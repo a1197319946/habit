@@ -403,7 +403,7 @@ const yearlyChartData = computed(() => {
       id: h.id,
       color: h.color || '#3B82F6',
       val: item.map[h.id] ? item.map[h.id].size : 0
-    }));
+    })).filter(seg => seg.val > 0);
   });
   
   return { data, maxVal: maxVal || 10 }; 
@@ -455,7 +455,7 @@ const allChartData = computed(() => {
       id: h.id,
       color: h.color || '#3B82F6',
       val: item.map[h.id] ? item.map[h.id].size : 0
-    }));
+    })).filter(seg => seg.val > 0);
   });
   
   return { data, maxVal: maxVal || 10 };
@@ -793,10 +793,18 @@ onShareTimeline(() => {
         border-radius: 6px;
         overflow: hidden;
         margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
         
         .bar-segment {
           width: 100%;
           transition: height 0.3s ease;
+          
+          &:first-child {
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+          }
         }
       }
       
