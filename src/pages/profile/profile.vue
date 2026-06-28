@@ -148,19 +148,40 @@ const saveProfile = async () => {
                        tempAvatarUrl.value.startsWith('wdfile://');
                        
     if (openid && tempAvatarUrl.value && isTempFile) {
+      // 压缩图片
+      const compressedPath = await new Promise((resolve) => {
+        uni.compressImage({
+          src: tempAvatarUrl.value,
+          quality: 60,
+          success: (res) => resolve(res.tempFilePath),
+          fail: () => resolve(tempAvatarUrl.value) // fallback
+        });
+      });
+
       const cloudPath = `avatars/${openid}-${Date.now()}.jpg`;
       const uploadRes = await cloud.uploadFile({
         cloudPath: cloudPath,
-        filePath: tempAvatarUrl.value,
+        filePath: compressedPath,
       });
       fileID = uploadRes.fileID;
     }
     
-    userStore.setUserInfo({
+    const newUserInfo = {
       avatarUrl: fileID,
       nickName: tempNickName.value
-    });
+    };
+    userStore.setUserInfo(newUserInfo);
     userStore.saveToStorage();
+    
+    // 将更新后的用户信息同步存入云数据库
+    cloud.callFunction({
+      name: 'user-center',
+      data: {
+        action: 'syncUserInfo',
+        openid: openid,
+        userInfo: newUserInfo
+      }
+    }).catch(err => console.error('同步用户信息失败', err));
     
     uni.hideLoading();
     uni.showToast({ title: '保存成功', icon: 'success' });

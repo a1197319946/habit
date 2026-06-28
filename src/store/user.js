@@ -56,6 +56,20 @@ export const useUserStore = defineStore('user', {
           
           if (result.code === 0) {
             this.setOpenid(result.openid);
+            
+            // 登录成功后，从云端拉取可能保存过的用户信息
+            try {
+              const infoRes = await cloud.callFunction({
+                name: 'user-center',
+                data: { action: 'getUserInfo', openid: result.openid }
+              });
+              if (infoRes.result && infoRes.result.code === 0 && infoRes.result.userInfo) {
+                this.setUserInfo(infoRes.result.userInfo);
+              }
+            } catch (err) {
+              console.error('拉取云端用户信息失败', err);
+            }
+            
             this.saveToStorage();
             return result.openid;
           } else {

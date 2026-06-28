@@ -41,6 +41,7 @@ import { computed, ref, getCurrentInstance } from 'vue';
 import { useHabitStore } from '@/store/habit';
 import { useUserStore } from '@/store/user';
 import { drawRoundRect } from '@/utils/canvasHelper';
+import { getDailyQuote } from '@/utils/quotes';
 
 const props = defineProps({
   habit: Object,
@@ -121,8 +122,8 @@ const progressData = computed(() => {
 const statsData = computed(() => {
   if (!props.habit) return null;
   const checkins = habitStore.getCheckins.filter(c => c.habitId === props.habit.id).sort((a,b) => a.date.localeCompare(b.date));
-  
   const totalCount = checkins.length;
+  const totalAmount = checkins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
   
   const dateStr = props.date || new Date().toISOString().split('T')[0];
   const [ty, tm, td] = dateStr.split('-');
@@ -131,6 +132,10 @@ const statsData = computed(() => {
   const thisMonthCheckins = checkins.filter(c => c.date.startsWith(currentMonthStr));
   const monthCount = thisMonthCheckins.length;
   const monthDays = new Set(thisMonthCheckins.map(c => c.date)).size;
+  const monthAmount = thisMonthCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  
+  const todayCheckin = checkins.find(c => c.date === dateStr);
+  const todayAmount = todayCheckin ? (Number(todayCheckin.amount) || 0) : (props.habit.goalType === 'amount' ? 0 : (thisMonthCheckins.some(c => c.date === dateStr) ? 1 : 0));
   
   let maxStreak = 0;
   let currentStreak = 0;
@@ -190,7 +195,7 @@ const statsData = computed(() => {
     weeklyTrend.push(hasCheckin);
   }
   
-  return { totalCount, monthCount, monthDays, maxStreak, currentStreak, weeklyTrend, weekCheckins };
+  return { totalCount, monthCount, monthDays, maxStreak, currentStreak, weeklyTrend, weekCheckins, totalAmount, monthAmount, todayAmount };
 });
 
 const generatePoster = async () => {
@@ -223,7 +228,7 @@ const generatePoster = async () => {
 
     // Fetch required remote images
     const [bgPath, scancodePath] = await Promise.all([
-      downloadImage('https://mp-262de33c-8e30-4555-93c8-259e7396a210.cdn.bspapp.com/img/bg.png'),
+      downloadImage(`https://mp-262de33c-8e30-4555-93c8-259e7396a210.cdn.bspapp.com/img/bg.png?t=${Date.now()}`),
       downloadImage('https://mp-262de33c-8e30-4555-93c8-259e7396a210.cdn.bspapp.com/img/scancode.jpg')
     ]);
 
@@ -240,8 +245,16 @@ const generatePoster = async () => {
     ctx.setTextBaseline('top');
     ctx.setTextAlign('left');
 
-    // 1.5 Calendar Day (703, 207), size 72
+    // 1.5 Calendar Day & Month
     const dateObj = new Date(props.date || new Date().toISOString().split('T')[0]);
+    
+    // Month abbr (712, 133), size 36, white
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    ctx.setFontSize(36);
+    ctx.setFillStyle('#FFFFFF');
+    ctx.fillText(monthNames[dateObj.getMonth()], 712, 133);
+
+    // Day (703, 207), size 72
     const dayNumStr = dateObj.getDate().toString();
     ctx.setFontSize(72);
     ctx.setFillStyle('#7E22CE');
@@ -251,10 +264,22 @@ const generatePoster = async () => {
     // 2. Quote (107, 439), size 48
     ctx.setFontSize(48);
     ctx.setFillStyle('#111827');
-    ctx.fillText('你现在的努力，', 107, 439);
-    ctx.fillText('你现在的努力，', 108, 439); // fake bold
-    ctx.fillText('是为了遇见更好的自己。', 107, 509);
-    ctx.fillText('是为了遇见更好的自己。', 108, 509);
+    
+    const quote = getDailyQuote(props.date);
+    let line1 = quote;
+    let line2 = '';
+    if (quote.includes('，')) {
+      const parts = quote.split('，');
+      line1 = parts[0] + '，';
+      line2 = parts[1] || '';
+    }
+
+    ctx.fillText(line1, 107, 439);
+    ctx.fillText(line1, 108, 439); // fake bold
+    if (line2) {
+      ctx.fillText(line2, 107, 509);
+      ctx.fillText(line2, 108, 509);
+    }
 
     // Habit Name & Icon
     const hName = props.habit?.name || '未知习惯';
@@ -263,9 +288,49 @@ const generatePoster = async () => {
     ctx.fillText(hName, 107, 810); // down further
     ctx.fillText(hName, 108, 810);
     
+    const isAmount = props.habit?.goalType === 'amount';
+    const habitUnit = isAmount ? (props.habit?.amountUnit || '') : '天';
+
     if (props.habit?.icon) {
       const w = ctx.measureText(hName).width;
-      ctx.drawImage(`/static/icons/habbit/${props.habit.icon}.png`, 107 + w + 30, 800, 90, 90);
+      const iconX = 107 + w + 30;
+      // Bottom align to Y=890
+      // Icon height=60, so Y=890-60=830
+      ctx.drawImage(`/static/icons/habbit/${props.habit.icon}.png`, iconX, 830, 60, 60);
+
+      // Amount-based: append text and celebration icon
+      if (isAmount && statsData.value) {
+        // shift to the right by using a larger gap (40px)
+        const textXStart = iconX + 60 + 40;
+        
+        ctx.setFontSize(48); // larger text
+        ctx.setFillStyle('#111827');
+        const prefix = "完成";
+        const textY = 842; // bottom aligned: 890 - 48 = 842
+        ctx.fillText(prefix, textXStart, textY);
+        ctx.fillText(prefix, textXStart + 1, textY); // bold
+        const wPrefix = ctx.measureText(prefix).width;
+
+        ctx.setFontSize(64); // number even larger
+        ctx.setFillStyle('#7E22CE'); // highlight color
+        const numText = ` ${statsData.value.todayAmount} `; // spaces around number
+        const numY = 826; // bottom aligned: 890 - 64 = 826
+        ctx.fillText(numText, textXStart + wPrefix, numY);
+        ctx.fillText(numText, textXStart + wPrefix + 1, numY); // bold layer 1
+        ctx.fillText(numText, textXStart + wPrefix + 2, numY); // bold layer 2
+        const wNum = ctx.measureText(numText).width;
+
+        ctx.setFontSize(48);
+        ctx.setFillStyle('#111827');
+        const suffix = `${habitUnit}`;
+        ctx.fillText(suffix, textXStart + wPrefix + wNum, textY);
+        ctx.fillText(suffix, textXStart + wPrefix + wNum + 1, textY); // bold
+        const wSuffix = ctx.measureText(suffix).width;
+
+        const celebX = textXStart + wPrefix + wNum + wSuffix + 20;
+        // Celebration icon 50x50, bottom aligned: 890 - 50 = 840
+        ctx.drawImage('/static/icons/mood/158_激动.png', celebX, 840, 50, 50);
+      }
     }
 
     // (Chick, Avatar, Nickname removed per user request)
@@ -273,26 +338,47 @@ const generatePoster = async () => {
     ctx.setTextAlign('left'); // Reset for the rest
 
     // 7. Stats
-    // Month days (moved right from 203 to 223)
-    const mDays = (statsData.value.monthDays || 1).toString();
-    ctx.setFontSize(88); // larger
-    ctx.setFillStyle('#7E22CE');
-    ctx.fillText(mDays, 223, 1177);
-    ctx.fillText(mDays, 224, 1177); // bold layer 1
-    ctx.fillText(mDays, 225, 1177); // bold layer 2
+    const mDays = isAmount 
+      ? (statsData.value.monthAmount || 0).toString() 
+      : (statsData.value.monthCount || 1).toString();
+      
+    // Month Stats (Center X = 79 + 375/2 = 266.5)
+    ctx.setFontSize(88);
     const w1 = ctx.measureText(mDays).width;
     ctx.setFontSize(40);
-    ctx.fillText('天', 223 + w1 + 10, 1177 + 40); // Align '天' vertically with the larger digits
-    
-    // Total days (moved left from 649 to 610)
-    const tDays = (statsData.value.totalCount || 1).toString();
+    const wUnit1 = ctx.measureText(habitUnit).width;
+    const totalW1 = w1 + 10 + wUnit1;
+    const startX1 = 266.5 - (totalW1 / 2);
+
     ctx.setFontSize(88); // larger
-    ctx.fillText(tDays, 610, 1177);
-    ctx.fillText(tDays, 611, 1177); // bold layer 1
-    ctx.fillText(tDays, 612, 1177); // bold layer 2
+    ctx.setFillStyle('#7E22CE');
+    ctx.fillText(mDays, startX1, 1177);
+    ctx.fillText(mDays, startX1 + 1, 1177); // bold layer 1
+    ctx.fillText(mDays, startX1 + 2, 1177); // bold layer 2
+    
+    ctx.setFontSize(40);
+    ctx.fillText(habitUnit, startX1 + w1 + 10, 1177 + 40); // Align vertically with the larger digits
+    
+    // Total Stats (Center X = 480 + 375/2 = 667.5)
+    const tDays = isAmount 
+      ? (statsData.value.totalAmount || 0).toString() 
+      : (statsData.value.totalCount || 1).toString();
+      
+    ctx.setFontSize(88);
     const w2 = ctx.measureText(tDays).width;
     ctx.setFontSize(40);
-    ctx.fillText('天', 610 + w2 + 10, 1177 + 40);
+    const wUnit2 = ctx.measureText(habitUnit).width;
+    const totalW2 = w2 + 10 + wUnit2;
+    const startX2 = 667.5 - (totalW2 / 2);
+
+    ctx.setFontSize(88); // larger
+    ctx.setFillStyle('#7E22CE');
+    ctx.fillText(tDays, startX2, 1177);
+    ctx.fillText(tDays, startX2 + 1, 1177); // bold layer 1
+    ctx.fillText(tDays, startX2 + 2, 1177); // bold layer 2
+    
+    ctx.setFontSize(40);
+    ctx.fillText(habitUnit, startX2 + w2 + 10, 1177 + 40);
 
     // 8. QR Code (118, 1399) size (144, 144)
     if (scancodePath) {

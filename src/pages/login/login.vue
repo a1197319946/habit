@@ -131,10 +131,20 @@ const handleLogin = async () => {
     let fileID = avatarUrl.value;
     if (avatarUrl.value && !avatarUrl.value.startsWith('http') && !avatarUrl.value.startsWith('cloud://')) {
       try {
+        // 压缩图片
+        const compressedPath = await new Promise((resolve) => {
+          uni.compressImage({
+            src: avatarUrl.value,
+            quality: 60,
+            success: (res) => resolve(res.tempFilePath),
+            fail: () => resolve(avatarUrl.value) // fallback to original
+          });
+        });
+
         const cloudPath = `avatars/${openid}-${Date.now()}.jpg`;
         const uploadRes = await cloud.uploadFile({
           cloudPath: cloudPath,
-          filePath: avatarUrl.value,
+          filePath: compressedPath,
         });
         fileID = uploadRes.fileID;
       } catch (uploadErr) {
@@ -143,11 +153,22 @@ const handleLogin = async () => {
     }
 
     // 4. 更新全局状态
-    userStore.setUserInfo({
+    const newUserInfo = {
       avatarUrl: fileID,
       nickName: nickName.value
-    });
+    };
+    userStore.setUserInfo(newUserInfo);
     userStore.saveToStorage();
+
+    // 将用户信息同步存入云数据库
+    cloud.callFunction({
+      name: 'user-center',
+      data: {
+        action: 'syncUserInfo',
+        openid: openid,
+        userInfo: newUserInfo
+      }
+    }).catch(err => console.error('同步用户信息失败', err));
 
     // 5. 初始化用户习惯数据
     const habitStore = useHabitStore();

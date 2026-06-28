@@ -1,0 +1,43 @@
+{
+  "bsonType": "object",
+  "required": ["openid", "userInfo"],
+  "permission": {
+    "read": "doc.openid == auth.openid",
+    "create": "false",
+    "update": "false",
+    "delete": "false"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（系统自动生成）",
+      "bsonType": "string"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "用户微信 OpenID",
+      "title": "OpenID"
+    },
+    "userInfo": {
+      "bsonType": "object",
+      "description": "用户信息字典",
+      "properties": {
+        "nickName": {
+          "bsonType": "string",
+          "description": "用户昵称"
+        },
+        "avatarUrl": {
+          "bsonType": "string",
+          "description": "用户头像URL/文件ID"
+        }
+      }
+    },
+    "createTime": {
+      "bsonType": "timestamp",
+      "description": "创建时间"
+    },
+    "updateTime": {
+      "bsonType": "timestamp",
+      "description": "更新时间"
+    }
+  }
+}

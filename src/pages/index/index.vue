@@ -104,7 +104,7 @@
     <!-- Bottom Banner -->
     <view class="bottom-banner">
       <view class="banner-content">
-        <text class="banner-title">小小坚持，大大改变</text>
+        <text class="banner-title">{{ dailyQuote }}</text>
         <text class="banner-subtitle">今天也要加油哦！<text class="emoji">💪</text></text>
       </view>
       <view class="banner-illustration">
@@ -142,13 +142,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { onShow, onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
 import { useHabitStore } from '@/store/habit';
 import { useUserStore } from '@/store/user';
 import MoodRecorder from '@/components/mood-recorder/mood-recorder.vue';
 import AmountCheckinPopup from '@/components/amount-checkin-popup/amount-checkin-popup.vue';
+import { getDailyQuote } from '@/utils/quotes';
 
 const habitStore = useHabitStore();
 const userStore = useUserStore();
@@ -166,6 +167,10 @@ const futureWeekDays = ref([]);
 const amountPopupRef = ref(null);
 const currentHabitInitialAmount = ref(null);
 const currentHabitAccumulated = ref(0);
+
+const dailyQuote = computed(() => {
+  return getDailyQuote(selectedDate.value);
+});
 
 // 开启微信分享给朋友
 onShareAppMessage(() => {

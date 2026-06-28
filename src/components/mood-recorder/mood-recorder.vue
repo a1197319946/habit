@@ -112,6 +112,7 @@ const chooseImage = () => {
     count: 1,
     mediaType: ['image'],
     sourceType: ['album', 'camera'],
+    sizeType: ['compressed'],
     success: (res) => {
       const tempPath = res.tempFiles[0].tempFilePath;
       uni.saveFile({
