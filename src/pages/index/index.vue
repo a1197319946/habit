@@ -451,7 +451,6 @@ const handleCheckin = (habitId) => {
   const existingCheckin = habitStore.getCheckinsByDate(selectedDate.value).find(c => c.habitId === habitId);
 
   if (existingCheckin) {
-    uni.hideTabBar();
     if (habit.goalType === 'amount') {
       uni.showActionSheet({
         itemList: ['修改数据', '撤销打卡'],
@@ -465,19 +464,6 @@ const handleCheckin = (habitId) => {
             // Undo
             habitStore.undoCheckin(habitId, selectedDate.value);
           }
-        },
-        fail: () => {
-          uni.showTabBar();
-        },
-        complete: (res) => {
-          // If tapIndex is undefined, user dismissed the sheet without selecting
-          if (res.errMsg && res.errMsg.indexOf('cancel') > -1) {
-            uni.showTabBar();
-          } else if (res.tapIndex === 1) {
-            // On undo, we show tab bar
-            uni.showTabBar();
-          }
-          // On modify, amount popup will open, so it handles tab bar.
         }
       });
     } else {
@@ -488,9 +474,6 @@ const handleCheckin = (habitId) => {
           if (res.tapIndex === 0) {
             habitStore.undoCheckin(habitId, selectedDate.value);
           }
-        },
-        complete: () => {
-          uni.showTabBar();
         }
       });
     }

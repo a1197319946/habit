@@ -283,11 +283,16 @@ const scopedCheckins = computed(() => {
 
 const timeFilteredCheckins = computed(() => {
   return scopedCheckins.value.filter(c => {
-    const d = new Date(c.timestamp || c.date);
+    if (!c.date) return false;
+    const parts = c.date.split('-');
+    if (parts.length !== 3) return false;
+    const cYear = Number(parts[0]);
+    const cMonth = Number(parts[1]);
+    
     if (filterMode.value === 'month') {
-      return d.getFullYear() === currentYear.value && (d.getMonth() + 1) === currentMonth.value;
+      return cYear === currentYear.value && cMonth === currentMonth.value;
     } else if (filterMode.value === 'year') {
-      return d.getFullYear() === currentYear.value;
+      return cYear === currentYear.value;
     }
     return true;
   });
@@ -356,17 +361,7 @@ const getHabitsOnDay = (day) => {
   const dateStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const habitsOnDay = [];
   timeFilteredCheckins.value.forEach(c => {
-    let matches = false;
     if (c.date === dateStr) {
-      matches = true;
-    } else {
-      const d = new Date(c.timestamp || c.date);
-      if (d.getDate() === day && d.getMonth() + 1 === currentMonth.value && d.getFullYear() === currentYear.value) {
-        matches = true;
-      }
-    }
-    
-    if (matches) {
       const h = activeHabits.value.find(hab => hab.id === c.habitId);
       if (h && !habitsOnDay.find(x => x.id === h.id)) {
         habitsOnDay.push(h);
@@ -383,8 +378,13 @@ const yearlyChartData = computed(() => {
   });
   
   timeFilteredCheckins.value.forEach(c => {
-    const d = new Date(c.timestamp || c.date);
-    const mIndex = d.getMonth();
+    if (!c.date) return;
+    const parts = c.date.split('-');
+    if (parts.length < 2) return;
+    const cMonth = Number(parts[1]);
+    const mIndex = cMonth - 1;
+    if (!data[mIndex]) return;
+    
     if (!data[mIndex].map[c.habitId]) {
       data[mIndex].map[c.habitId] = new Set();
     }
@@ -414,8 +414,12 @@ const availableYears = computed(() => {
   const years = new Set();
   years.add(new Date().getFullYear()); 
   scopedCheckins.value.forEach(c => {
-    const d = new Date(c.timestamp || c.date);
-    years.add(d.getFullYear());
+    if (c.date) {
+      const parts = c.date.split('-');
+      if (parts.length > 0) {
+        years.add(Number(parts[0]));
+      }
+    }
   });
   return Array.from(years).sort();
 });
@@ -427,8 +431,11 @@ const allChartData = computed(() => {
   });
   
   timeFilteredCheckins.value.forEach(c => {
-    const d = new Date(c.timestamp || c.date);
-    const yIndex = years.indexOf(d.getFullYear());
+    if (!c.date) return;
+    const parts = c.date.split('-');
+    if (parts.length === 0) return;
+    const cYear = Number(parts[0]);
+    const yIndex = years.indexOf(cYear);
     if (yIndex !== -1) {
       if (!data[yIndex].map[c.habitId]) {
         data[yIndex].map[c.habitId] = new Set();

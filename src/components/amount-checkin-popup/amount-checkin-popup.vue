@@ -26,7 +26,7 @@
             type="digit" 
             v-model.number="amount" 
             placeholder="0" 
-            auto-focus
+            :focus="isFocus"
           />
           <text class="unit-text">{{ habit?.amountUnit || '' }}</text>
         </view>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 
 const props = defineProps({
   habit: Object,
@@ -58,6 +58,7 @@ const emit = defineEmits(['close', 'submit']);
 
 const popupRef = ref(null);
 const amount = ref('');
+const isFocus = ref(false);
 
 const open = () => {
   if (props.initialAmount) {
@@ -66,9 +67,15 @@ const open = () => {
     amount.value = '';
   }
   popupRef.value?.open();
+  // Wait for the popup slide-up animation (usually ~300ms) to complete
+  // before focusing the input, otherwise the keyboard popup will cause a jump.
+  setTimeout(() => {
+    isFocus.value = true;
+  }, 400);
 };
 
 const close = () => {
+  isFocus.value = false;
   popupRef.value?.close();
 };
 
