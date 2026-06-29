@@ -41,10 +41,10 @@
             <text class="day-label">{{ day.label }}</text>
             
             <view class="day-content" :class="{'is-selected-pill': day.isSelected}">
-              <text class="day-number" :class="{'is-selected-text': day.isSelected && !day.isChecked, 'is-future-text': day.isFuture && !day.isToday}">{{ day.dateText }}</text>
+              <text class="day-number" :class="{'is-today-text': day.isToday, 'is-selected-text': day.isSelected && !day.isChecked, 'is-future-text': day.isFuture && !day.isToday}">{{ day.dateText }}</text>
               
               <view class="day-status-icon">
-                <view v-if="day.isChecked" class="status-icon checked-circle" :class="{'today-bg': day.isToday}">
+                <view v-if="day.isChecked" class="status-icon checked-circle">
                   <uni-icons type="checkmarkempty" size="12" color="#fff"></uni-icons>
                 </view>
                 <view v-else class="status-icon unchecked-circle"></view>
@@ -204,6 +204,12 @@ const pageTransform = ref('translateX(-33.333%)');
 onShow(() => {
   const sysInfo = uni.getSystemInfoSync();
   statusBarHeight.value = sysInfo.statusBarHeight || 44;
+  
+  const todayObj = new Date();
+  const currentTodayStr = [todayObj.getFullYear(), String(todayObj.getMonth() + 1).padStart(2, '0'), String(todayObj.getDate()).padStart(2, '0')].join('-');
+  selectedDate.value = currentTodayStr;
+  currentWeekOffset.value = 0;
+  
   generateWeekDays();
 });
 
@@ -292,6 +298,24 @@ const onTouchMove = (e) => {
   pageTransform.value = `translateX(calc(-33.333% + ${dragOffsetX.value}px))`;
 };
 
+const updateSelectedDateOnSwipe = () => {
+  const todayDate = new Date();
+  const day = todayDate.getDay(); 
+  const diff = day === 0 ? 6 : day - 1; 
+  
+  const baseDate = new Date();
+  baseDate.setDate(todayDate.getDate() + (currentWeekOffset.value * 7));
+  const newBaseDay = baseDate.getDay();
+  const newBaseDiff = newBaseDay === 0 ? 6 : newBaseDay - 1;
+  const monday = new Date(baseDate);
+  monday.setDate(baseDate.getDate() - newBaseDiff);
+  
+  const targetDate = new Date(monday);
+  targetDate.setDate(monday.getDate() + diff);
+  
+  selectedDate.value = [targetDate.getFullYear(), String(targetDate.getMonth() + 1).padStart(2, '0'), String(targetDate.getDate()).padStart(2, '0')].join('-');
+};
+
 const onTouchEnd = (e) => {
   if (!isDragging.value) return;
   isDragging.value = false;
@@ -303,6 +327,7 @@ const onTouchEnd = (e) => {
     pageTransform.value = `translateX(0%)`;
     setTimeout(() => {
       currentWeekOffset.value -= 1;
+      updateSelectedDateOnSwipe();
       generateWeekDays();
       // Move instantly back to center (which now has the new week's data)
       pageTransition.value = 'none';
@@ -314,6 +339,7 @@ const onTouchEnd = (e) => {
     pageTransform.value = `translateX(-66.666%)`;
     setTimeout(() => {
       currentWeekOffset.value += 1;
+      updateSelectedDateOnSwipe();
       generateWeekDays();
       // Move instantly back to center
       pageTransition.value = 'none';
@@ -480,13 +506,32 @@ const handleCheckin = (habitId) => {
       });
     }
   } else {
-    if (habit.goalType === 'amount') {
-      currentHabitInitialAmount.value = null;
-      amountPopupRef.value?.open();
+    const doCheckin = () => {
+      if (habit.goalType === 'amount') {
+        currentHabitInitialAmount.value = null;
+        amountPopupRef.value?.open();
+      } else {
+        habitStore.checkin(habitId, selectedDate.value);
+        triggerConfetti();
+        setTimeout(() => { checkinSuccessRef.value?.open(); }, 1200);
+      }
+    };
+
+    const currentTodayObj = new Date();
+    const currentTodayStr = [currentTodayObj.getFullYear(), String(currentTodayObj.getMonth() + 1).padStart(2, '0'), String(currentTodayObj.getDate()).padStart(2, '0')].join('-');
+
+    if (selectedDate.value !== currentTodayStr) {
+      uni.showModal({
+        title: '提示',
+        content: `对${selectedDate.value}补卡？`,
+        success: (res) => {
+          if (res.confirm) {
+            doCheckin();
+          }
+        }
+      });
     } else {
-      habitStore.checkin(habitId, selectedDate.value);
-      triggerConfetti();
-      setTimeout(() => { checkinSuccessRef.value?.open(); }, 1200);
+      doCheckin();
     }
   }
 };
@@ -745,7 +790,7 @@ const handleMoodSubmit = (moodData) => {
   color: #111827;
   margin-bottom: 6px;
   
-  &.is-selected-text {
+  &.is-selected-text, &.is-today-text {
     color: #8B5CF6;
   }
   
@@ -764,13 +809,8 @@ const handleMoodSubmit = (moodData) => {
 }
 
 .checked-circle {
-  background-color: #10B981;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-  
-  &.today-bg {
-    background-color: #8B5CF6;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-  }
+  background-color: #8B5CF6;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .unchecked-circle {

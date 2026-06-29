@@ -225,6 +225,11 @@ const onAmountInput = (e) => {
 const submit = async () => {
   if (isSubmitting.value) return;
 
+  if (habitStore.habits.length >= 10) {
+    uni.showToast({ title: '最多只能创建10个习惯哦', icon: 'none' });
+    return;
+  }
+
   const trimmedName = formData.name.trim();
   if (!trimmedName) {
     uni.showToast({ title: '请输入习惯名称', icon: 'none' });

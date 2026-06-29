@@ -106,7 +106,7 @@ const progressData = computed(() => {
 
   if (isAmount) {
     target = Number(props.habit.amountValue) || 0;
-    currentTotal = periodCheckins.value.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    currentTotal = Number(periodCheckins.value.reduce((sum, c) => sum + (Number(c.amount) || 0), 0).toFixed(1));
     const todayCheckin = periodCheckins.value.find(c => c.date === props.date);
     todayAmount = todayCheckin ? (Number(todayCheckin.amount) || 0) : 0;
   } else {
@@ -123,7 +123,7 @@ const statsData = computed(() => {
   if (!props.habit) return null;
   const checkins = habitStore.getCheckins.filter(c => c.habitId === props.habit.id).sort((a,b) => a.date.localeCompare(b.date));
   const totalCount = checkins.length;
-  const totalAmount = checkins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const totalAmount = Number(checkins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0).toFixed(1));
   
   const dateStr = props.date || new Date().toISOString().split('T')[0];
   const [ty, tm, td] = dateStr.split('-');
@@ -132,7 +132,7 @@ const statsData = computed(() => {
   const thisMonthCheckins = checkins.filter(c => c.date.startsWith(currentMonthStr));
   const monthCount = thisMonthCheckins.length;
   const monthDays = new Set(thisMonthCheckins.map(c => c.date)).size;
-  const monthAmount = thisMonthCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const monthAmount = Number(thisMonthCheckins.reduce((sum, c) => sum + (Number(c.amount) || 0), 0).toFixed(1));
   
   const todayCheckin = checkins.find(c => c.date === dateStr);
   const todayAmount = todayCheckin ? (Number(todayCheckin.amount) || 0) : (props.habit.goalType === 'amount' ? 0 : (thisMonthCheckins.some(c => c.date === dateStr) ? 1 : 0));
