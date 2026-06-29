@@ -193,7 +193,10 @@ const _today = new Date();
 const todayStr = [_today.getFullYear(), String(_today.getMonth() + 1).padStart(2, '0'), String(_today.getDate()).padStart(2, '0')].join('-');
 const selectedDate = ref(todayStr);
 const currentWeekOffset = ref(0);
-const currentDisplayMonth = ref(new Date().getMonth() + 1);
+const currentDisplayMonth = computed(() => {
+  if (!selectedDate.value) return new Date().getMonth() + 1;
+  return parseInt(selectedDate.value.split('-')[1], 10);
+});
 
 let touchStartX = 0;
 const isDragging = ref(false);
@@ -217,7 +220,7 @@ watch(() => habitStore.checkins, () => {
   generateWeekDays();
 }, { deep: true });
 
-const generateOneWeek = (offset, returnMidMonth = false) => {
+const generateOneWeek = (offset) => {
   const today = new Date();
   
   const baseDate = new Date();
@@ -262,16 +265,12 @@ const generateOneWeek = (offset, returnMidMonth = false) => {
     });
   }
   
-  if (returnMidMonth) {
-    currentDisplayMonth.value = midWeekMonth;
-  }
-  
   return week;
 };
 
 const generateWeekDays = () => {
   pastWeekDays.value = generateOneWeek(currentWeekOffset.value - 1);
-  currentWeekDays.value = generateOneWeek(currentWeekOffset.value, true);
+  currentWeekDays.value = generateOneWeek(currentWeekOffset.value);
   futureWeekDays.value = generateOneWeek(currentWeekOffset.value + 1);
 };
 
