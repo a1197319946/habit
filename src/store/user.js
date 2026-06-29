@@ -74,15 +74,16 @@ export const useUserStore = defineStore('user', {
             return result.openid;
           } else {
             console.error('Silent login failed:', result);
-            const errMsg = `AppSecret可能错误(errcode: ${result.data?.errcode || '未知'})，完整信息: ${JSON.stringify(result)}`;
-            uni.showModal({ title: '静默登录失败', content: errMsg, showCancel: false });
-            throw new Error('静默登录失败: ' + errMsg);
+            // 同样作为静默登录，失败时不应弹窗打断用户
+            return null;
           }
         } catch (err) {
           console.error('Silent login error:', err);
-          const errMsg = '调用user-center云函数失败: ' + (err.message || String(err));
-          uni.showModal({ title: '网络或环境异常', content: errMsg, showCancel: false });
-          throw new Error(errMsg);
+          const errDetail = typeof err === 'object' ? JSON.stringify(err) : String(err);
+          const errMsg = '调用user-center云函数失败: ' + (err.message || errDetail);
+          // 在微信单页模式（朋友圈分享等）下，uni.login 或云函数会报错，
+          // 既然是静默登录，失败了直接返回即可，不要弹窗打断用户
+          return null;
         } finally {
           this._loginPromise = null;
         }
